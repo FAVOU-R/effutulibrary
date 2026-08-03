@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Patron Portal - Effutu Municipal Library System{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Banner -->
+    <div class="bg-effutu-green text-white p-6 rounded-lg shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-extrabold flex items-center gap-2">
+                <i class="fa-solid fa-id-card text-emerald-300"></i>
+                Akwaaba, {{ patron.full_name }}
+            </h1>
+            <p class="text-xs text-emerald-200 mt-1">Official Patron Member ID: <strong class="text-white font-mono font-bold">{{ patron.member_id }}</strong> • Home Branch: {{ patron.branch.name }}</p>
+        </div>
+        <a href="/scan-qr" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded shadow flex items-center gap-2 border border-emerald-400">
+            <i class="fa-solid fa-qrcode text-lg"></i> Instant QR Self-Borrow
+        </a>
+    </div>
+
+    <!-- Active Loans Section -->
+    <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+        <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-book-reader text-emerald-600"></i>
+            My Active Loans & Due Dates
+        </h3>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 border-collapse">
+                <thead>
+                    <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                        <th class="p-3">Book Title</th>
+                        <th class="p-3">Issue Date</th>
+                        <th class="p-3">Due Date (14 Days)</th>
+                        <th class="p-3">Fine Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for t in active_loans %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-semibold text-slate-800">{{ t.book_title }}</td>
+                        <td class="p-3 font-mono">{{ t.issue_date }}</td>
+                        <td class="p-3 font-mono font-bold">{{ t.due_date }}</td>
+                        <td class="p-3">
+                            {% if t.is_overdue %}
+                                <span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded">OVERDUE (Fine: GHS {{ "%.2f"|format(t.fine_amount_ghs) }})</span>
+                            {% else %}
+                                <span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded">Active (On Schedule)</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="p-4 text-center text-slate-400">You currently have no active book loans. Browse catalog below to borrow!</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- AI Feature 1: Collaborative Filtering Recommendation Section -->
+    <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                    AI Recommended Reads For You
+                </h3>
+                <p class="text-xs text-slate-500">Collaborative filtering model matching your branch reading history & WASSCE prep materials</p>
+            </div>
+            <span class="bg-amber-100 text-amber-800 text-[10px] font-extrabold px-2.5 py-1 rounded border border-amber-300">
+                AI ENGINE ACTIVE
+            </span>
+        </div>
+
+        <div id="ai-recs-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <!-- Loaded dynamically via JS -->
+            <div class="col-span-full text-center py-4 text-slate-400 text-xs">Loading AI Recommendations...</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", async function() {
+    try {
+        const res = await fetch('/api/ai/recommend');
+        const data = await res.json();
+        const container = document.getElementById('ai-recs-container');
+        if (data.recommendations && data.recommendations.length > 0) {
+            container.innerHTML = data.recommendations.map(r => `
+                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center flex flex-col justify-between hover:shadow-md transition">
+                    <img src="${r.cover_url}" class="h-32 w-full object-cover rounded mb-2" alt="${r.title}">
+                    <div class="font-bold text-xs text-slate-800 line-clamp-1">${r.title}</div>
+                    <div class="text-[11px] text-slate-500 line-clamp-1 mb-1">${r.author}</div>
+                    <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded inline-block mb-2">${r.category}</span>
+                    <a href="/catalog" class="btn-effutu text-[10px] py-1 px-2 block w-full">View Details</a>
+                </div>
+            `).join('');
+        }
+    } catch(e) {
+        console.log(e);
+    }
+});
+</script>
+{% endblock %}
