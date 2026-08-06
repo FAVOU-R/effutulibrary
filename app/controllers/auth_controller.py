@@ -574,6 +574,28 @@ async def logout():
 @router.get("/reset-admin")
 def reset_admin_credentials(db: Session = Depends(get_db)):
     import traceback
+    from sqlalchemy import text
+
+    migration_logs = []
+
+    # 1. Execute Column Schema Alignment on PostgreSQL / SQLite
+    for stmt in [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
+        "UPDATE users SET ghana_card_number = ghana_card WHERE ghana_card_number IS NULL AND ghana_card IS NOT NULL;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;"
+    ]:
+        try:
+            db.execute(text(stmt))
+            db.commit()
+            migration_logs.append(f"Executed: {stmt[:40]}...")
+        except Exception as st_err:
+            db.rollback()
+            migration_logs.append(f"Skipped/Handled: {str(st_err)[:60]}")
+
+    # 2. Seed / Reset Administrative Credentials
     try:
         creds = [
             ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
@@ -605,15 +627,24 @@ def reset_admin_credentials(db: Session = Depends(get_db)):
                 user.is_approved = True
                 user.must_change_password = False
                 user.is_physically_verified = True
+                if hasattr(user, 'ghana_card_number') and not user.ghana_card_number:
+                    user.ghana_card_number = gha
                 db.commit()
                 result.append(f"Reset {email} / {plain}")
         db.commit()
         return {
             "status": "success",
+            "schema_migration": migration_logs,
             "details": result,
             "login_now": "Use admin@effutu.edu.gh / Admin@123 or librarian@effutu.edu.gh / Librarian@123"
         }
     except Exception as e:
         db.rollback()
-        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+        return {
+            "status": "error",
+            "schema_migration": migration_logs,
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
+
 

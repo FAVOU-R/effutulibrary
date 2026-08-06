@@ -53,12 +53,30 @@ app.include_router(librarian_router)
 
 @app.on_event("startup")
 def on_startup():
+    from sqlalchemy import text
     Base.metadata.create_all(bind=engine)
+    try:
+        with engine.begin() as conn:
+            for col_stmt in [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;"
+            ]:
+                try:
+                    conn.execute(text(col_stmt))
+                except Exception:
+                    pass
+    except Exception as e:
+        print(f"[STARTUP WARNING] Schema migration exception: {e}")
+
     if seed_database:
         try:
             seed_database()
         except Exception as e:
             print(f"[STARTUP WARNING] Seed database exception: {e}")
+
 
 
 # --- HTML Template Views ---
