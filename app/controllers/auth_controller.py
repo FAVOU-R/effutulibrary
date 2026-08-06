@@ -556,3 +556,50 @@ async def logout():
     resp = RedirectResponse(url="/auth/login", status_code=303)
     resp.delete_cookie("access_token")
     return resp
+
+@router.get("/reset-admin")
+def reset_admin_credentials(db: Session = Depends(get_db)):
+    import traceback
+    try:
+        creds = [
+            ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
+            ("librarian@effutu.edu.gh", "librarian", "Librarian@123", "GHA-000000001-0"),
+            ("sysadmin@effutulibrary.gov.gh", "sys_admin", "admin123", "GHA-000000001-1"),
+            ("librarian@effutulibrary.gov.gh", "librarian", "admin123", "GHA-000000003-3")
+        ]
+        result = []
+        for email, role, plain, gha in creds:
+            user = db.query(User).filter(User.email == email).first()
+            hashed = get_password_hash(plain)
+            if not user:
+                user = User(
+                    email=email,
+                    full_name=role.replace('_', ' ').title(),
+                    role=role,
+                    ghana_card_number=gha,
+                    is_approved=True,
+                    is_active=True,
+                    must_change_password=False,
+                    is_physically_verified=True,
+                    hashed_password=hashed
+                )
+                db.add(user)
+                result.append(f"Created {email} / {plain}")
+            else:
+                user.hashed_password = hashed
+                user.is_active = True
+                user.is_approved = True
+                user.must_change_password = False
+                user.is_physically_verified = True
+                db.commit()
+                result.append(f"Reset {email} / {plain}")
+        db.commit()
+        return {
+            "status": "success",
+            "details": result,
+            "login_now": "Use admin@effutu.edu.gh / Admin@123 or librarian@effutu.edu.gh / Librarian@123"
+        }
+    except Exception as e:
+        db.rollback()
+        return {"status": "error", "error": str(e), "trace": traceback.format_exc()}
+
