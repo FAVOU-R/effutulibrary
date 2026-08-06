@@ -7,6 +7,7 @@ import os
 
 from app.config import settings
 from app.database import get_db, engine, Base
+from app.models import Branch, User, Book, BookCopy, Transaction
 try:
     from seed_data import seed_database
 except ImportError:
@@ -14,6 +15,7 @@ except ImportError:
         from app.seed_data import seed_database
     except ImportError:
         seed_database = None
+
 
 
 # Include API Controllers
