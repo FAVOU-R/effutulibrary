@@ -12,19 +12,19 @@ from app.services.ai_service import get_ai_response
 router = APIRouter(prefix="/ai", tags=["AI"])
 
 @router.post("/chat-boy")
-async def chat_boy_grok(request: Request):
+async def chat_boy_grok(request: Request, db: Session = Depends(get_db)):
     try:
         body = await request.json()
     except Exception:
         body = {}
     
     question = body.get("question") or body.get("prompt") or ""
-    answer = get_ai_response(question)
+    answer = get_ai_response(question, db=db)
     return JSONResponse({"answer": answer, "response": answer, "prompt": question})
 
 @router.post("/chatbot")
-async def chatbot_alias(request: Request):
-    return await chat_boy_grok(request)
+async def chatbot_alias(request: Request, db: Session = Depends(get_db)):
+    return await chat_boy_grok(request, db=db)
 
 @router.get("/search")
 def nlp_search(q: str = Query(..., min_length=1), db: Session = Depends(get_db)):
