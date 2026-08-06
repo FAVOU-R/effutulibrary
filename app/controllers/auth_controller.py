@@ -304,8 +304,12 @@ async def login(
     password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    wants_json = "application/json" in request.headers.get("accept", "").lower()
+
     user = db.query(User).filter(User.email == email.lower().strip()).first()
     if not user or not verify_password(password, user.hashed_password):
+        if wants_json:
+            return JSONResponse(status_code=400, content={"error": "Invalid email or password."})
         return HTMLResponse("""
         <div style='max-width:400px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Invalid Credentials</h3>
@@ -315,6 +319,8 @@ async def login(
         """, status_code=400)
 
     if not user.is_active:
+        if wants_json:
+            return JSONResponse(status_code=403, content={"error": "Account deactivated by librarian."})
         return HTMLResponse("""
         <div style='max-width:400px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Account Deactivated</h3>
@@ -328,14 +334,22 @@ async def login(
     # Redirect to force password change if required
     if user.must_change_password:
         temp_token = create_access_token({"sub": str(user.id), "type": "force_change"}, expires_delta=timedelta(minutes=30))
-        resp = RedirectResponse(url=f"/auth/force-change-password?token={temp_token}", status_code=303)
+        target_url = f"/auth/force-change-password?token={temp_token}"
+        if wants_json:
+            resp = JSONResponse(content={"redirect_url": target_url})
+        else:
+            resp = RedirectResponse(url=target_url, status_code=303)
         resp.set_cookie(key="access_token", value=token, httponly=True, max_age=86400)
         return resp
 
     redirect_url = f"/dashboard/{user.role}" if user.role in ["sys_admin", "hq_admin", "librarian", "patron"] else "/dashboard/patron"
-    resp = RedirectResponse(url=redirect_url, status_code=303)
+    if wants_json:
+        resp = JSONResponse(content={"redirect_url": redirect_url})
+    else:
+        resp = RedirectResponse(url=redirect_url, status_code=303)
     resp.set_cookie(key="access_token", value=token, httponly=True, max_age=86400)
     return resp
+
 
 @router.get("/force-change-password", response_class=HTMLResponse)
 async def force_change_page(token: str):

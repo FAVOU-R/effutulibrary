@@ -13,7 +13,7 @@
 
     <div id="error-alert" class="hidden mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded text-xs font-semibold"></div>
 
-    <form id="login-form" class="space-y-4">
+    <form id="login-form" method="post" action="/auth/login" class="space-y-4">
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
             <input type="email" name="email" required placeholder="member@effutulibrary.gov.gh" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:outline-none text-sm">
@@ -47,18 +47,29 @@ document.getElementById('login-form').addEventListener('submit', async function(
     try {
         const res = await fetch('/auth/login', {
             method: 'POST',
+            headers: { 'Accept': 'application/json' },
             body: formData
         });
-        const data = await res.json();
+
+        if (res.redirected) {
+            window.location.href = res.url;
+            return;
+        }
+
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonErr) {}
+
         if (res.ok) {
-            window.location.href = data.redirect_url;
+            window.location.href = data.redirect_url || '/dashboard/patron';
         } else {
-            errDiv.textContent = data.error || "Login failed";
+            errDiv.textContent = data.error || data.detail || "Invalid email or password. Please check your credentials.";
             errDiv.classList.remove('hidden');
         }
     } catch (err) {
-        errDiv.textContent = "Network error connecting to auth service";
-        errDiv.classList.remove('hidden');
+        // If fetch fails completely, fall back to traditional HTML form submit
+        this.submit();
     }
 });
 </script>
