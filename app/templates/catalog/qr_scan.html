@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}QR Instant Borrow Desk - Effutu Municipal Library System{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white border border-slate-200 rounded-lg p-6 shadow-md text-center">
+    <div class="inline-block p-4 bg-emerald-100 rounded-full text-emerald-800 mb-3">
+        <i class="fa-solid fa-qrcode text-4xl"></i>
+    </div>
+    <h2 class="text-xl font-extrabold text-slate-800">QR Instant Borrow Desk</h2>
+    <p class="text-xs text-slate-500 mt-1 mb-6">Complete book checkout in under 10 seconds via Book QR Token</p>
+
+    <!-- Camera Viewport Container -->
+    <div class="mb-6 border-2 border-dashed border-emerald-400 p-2 rounded-lg bg-emerald-50">
+        <div id="qr-camera-reader" class="w-full"></div>
+        <button id="start-qr-camera" class="w-full btn-effutu text-xs py-2 mt-2">
+            <i class="fa-solid fa-camera mr-1"></i> Start Camera QR Reader
+        </button>
+    </div>
+
+    <!-- Manual Token / Scanner Input -->
+    <div class="space-y-3">
+        <label class="block text-left text-xs font-bold text-slate-700 uppercase">Or Enter / USB Scan QR Token Code</label>
+        <input type="text" id="qr-token-input" placeholder="EFF-LIB-B1-BR1-XXXXXX" class="w-full p-2.5 border rounded font-mono text-sm uppercase text-center focus:ring-2 focus:ring-emerald-500">
+        <button id="submit-qr-btn" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs py-2.5 rounded shadow">
+            Execute Instant Checkout (&lt; 10s)
+        </button>
+    </div>
+
+    <div id="checkout-result" class="hidden mt-6 p-4 rounded-lg text-left text-xs"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function executeQRCheckout(token) {
+    if (!token.trim()) return;
+    const resDiv = document.getElementById('checkout-result');
+    resDiv.className = "mt-6 p-4 rounded-lg text-left text-xs bg-slate-100 text-slate-700";
+    resDiv.innerHTML = "Processing sub-10 second instant checkout...";
+    resDiv.classList.remove('hidden');
+
+    const fd = new FormData();
+    fd.append('qr_token', token.trim());
+
+    try {
+        const startTime = Date.now();
+        const res = await fetch('/api/issue/qr-checkout', { method: 'POST', body: fd });
+        const data = await res.json();
+        const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(2);
+
+        if (res.ok) {
+            resDiv.className = "mt-6 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg text-xs leading-relaxed";
+            resDiv.innerHTML = `
+                <div class="font-extrabold text-sm text-emerald-800 mb-1">
+                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> ${data.message}
+                </div>
+                <p><strong>Book:</strong> ${data.book_title}</p>
+                <p><strong>Borrower:</strong> ${data.borrower}</p>
+                <p><strong>Return Due Date:</strong> ${data.due_date}</p>
+                <div class="mt-2 text-[10px] text-emerald-700 font-mono">Completed in ${elapsedSec}s</div>
+            `;
+        } else {
+            resDiv.className = "mt-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold";
+            resDiv.textContent = data.error || "Checkout failed";
+        }
+    } catch(e) {
+        resDiv.className = "mt-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold";
+        resDiv.textContent = "Error executing checkout";
+    }
+}
+
+document.getElementById('submit-qr-btn').addEventListener('click', () => {
+    executeQRCheckout(document.getElementById('qr-token-input').value);
+});
+
+document.getElementById('start-qr-camera').addEventListener('click', () => {
+    initCameraScanner("qr-camera-reader", (scannedToken) => {
+        document.getElementById('qr-token-input').value = scannedToken;
+        executeQRCheckout(scannedToken);
+    });
+});
+
+function handleQRScanResult(scannedToken) {
+    document.getElementById('qr-token-input').value = scannedToken;
+    executeQRCheckout(scannedToken);
+}
+</script>
+{% endblock %}

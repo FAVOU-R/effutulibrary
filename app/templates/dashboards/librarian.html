@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Branch Librarian Desk - Effutu Library System{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Banner -->
+    <div class="bg-effutu-green text-white p-6 rounded-lg shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-extrabold flex items-center gap-2">
+                <i class="fa-solid fa-book-bookmark text-emerald-300"></i>
+                Branch Librarian Desk: {{ branch.name }}
+            </h1>
+            <p class="text-xs text-emerald-200 mt-1">Branch Scoped Management • Location: {{ branch.location }}</p>
+        </div>
+        <div class="bg-emerald-900 text-emerald-200 px-3 py-1.5 rounded font-mono text-xs font-bold uppercase border border-emerald-700">
+            Branch: {{ branch.code }}
+        </div>
+    </div>
+
+    <!-- Quick Action Bar -->
+    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-3">
+        <a href="/catalog/add" class="btn-effutu text-xs flex items-center gap-1">
+            <i class="fa-solid fa-plus-circle"></i> Add Book (ISBN Scan)
+        </a>
+        <a href="/scan-qr" class="btn-effutu-outline text-xs flex items-center gap-1">
+            <i class="fa-solid fa-qrcode"></i> QR Instant Borrow Desk
+        </a>
+    </div>
+
+    <!-- 2 Column Section: Pending Approvals & Active Branch Loans -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Pending Patron Registrations -->
+        <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-user-clock text-amber-500"></i>
+                Pending Patron Approvals ({{ pending_users|length }})
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Approving a patron generates a Member ID and triggers a Brevo notification email with login credentials.</p>
+
+            <div class="space-y-3">
+                {% for u in pending_users %}
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded flex justify-between items-center text-xs">
+                    <div>
+                        <div class="font-bold text-slate-800">{{ u.full_name }}</div>
+                        <div class="text-slate-500">{{ u.email }} • Registered: {{ u.created_at }}</div>
+                    </div>
+                    <button onclick="approveUser({{ u.id }})" class="btn-effutu text-xs py-1 px-3">
+                        Approve & Send Brevo Email
+                    </button>
+                </div>
+                {% else %}
+                <div class="text-center py-6 text-slate-400 text-xs">No pending patron registrations for this branch</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Branch Active & Overdue Loans -->
+        <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-file-invoice text-emerald-600"></i>
+                Branch Loans & Overdue Desk
+            </h3>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600 border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                            <th class="p-2">Book Title</th>
+                            <th class="p-2">Borrower</th>
+                            <th class="p-2">Due Date</th>
+                            <th class="p-2 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for t in active_loans %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-2 font-semibold text-slate-800">{{ t.book_title }}</td>
+                            <td class="p-2">{{ t.patron_name }}</td>
+                            <td class="p-2 font-mono">
+                                {% if t.is_overdue %}
+                                    <span class="text-rose-600 font-bold">{{ t.due_date }} (Overdue: GHS {{ "%.2f"|format(t.fine_amount_ghs) }})</span>
+                                {% else %}
+                                    <span>{{ t.due_date }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-2 text-right">
+                                <button onclick="returnBook({{ t.id }})" class="btn-effutu text-[11px] py-1 px-2">Return</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="p-4 text-center text-slate-400">No active loans</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function approveUser(userId) {
+    if (!confirm("Approve patron and dispatch Brevo welcome email with Member ID?")) return;
+    const res = await fetch(`/api/users/approve/${userId}`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if (res.ok) window.location.reload();
+}
+
+async function returnBook(transId) {
+    if (!confirm("Process book return?")) return;
+    const res = await fetch(`/api/issue/return/${transId}`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message + (data.fine_amount_ghs > 0 ? ` (Fine GHS ${data.fine_amount_ghs})` : ""));
+    window.location.reload();
+}
+</script>
+{% endblock %}
