@@ -17,34 +17,24 @@ def seed_database():
 
         print("[SEED] Starting database initialization for Effutu Municipal Library Network...")
 
-        # 1. Seed 19 Target Branches (4 active initially)
-        branches_data = [
-            {"code": "BR-EFF-01", "name": "Effutu Central Library (HQ)", "location": "Winneba Town Center", "status": "active", "is_hq": True},
-            {"code": "BR-EFF-02", "name": "Winneba Community Library", "location": "Commercial Street, Winneba", "status": "active", "is_hq": False},
-            {"code": "BR-EFF-03", "name": "South Campus Academic Library", "location": "UEW South Campus", "status": "active", "is_hq": False},
-            {"code": "BR-EFF-04", "name": "North Campus Digital & Reference Library", "location": "UEW North Campus", "status": "active", "is_hq": False},
+        # 1. Seed Active Municipal Libraries
+        active_libraries = [
+            ("BR-EFF-01", "Effutu Municipal Library (Abasraba - Main)", "Abasraba, Winneba", True),
+            ("BR-EFF-02", "Zagada Afadzinu Library", "Akosua Village, Winneba", False),
+            ("BR-EFF-03", "Nii Commey Library", "WTWI, Winneba", False),
+            ("BR-EFF-04", "Nana Amponsah Library", "Atekyedo, Effutu", False),
+            ("BR-EFF-05", "Neenyi Gyan Library", "Ekroful, Effutu", False),
+            ("BR-EFF-06", "Richard C. Ekem Library", "Low Cost - ICT Centre, Winneba", False),
+            ("BR-EFF-07", "Gyahadze Community Library", "Gyahadze, Effutu", False),
+            ("BR-EFF-08", "Nsakyir Community Library", "Nsakyir, Effutu", False),
+            ("BR-EFF-09", "UME Community Library", "UME, Winneba", False),
+            ("BR-EFF-10", "Unipra Basic School Library", "Winneba", False),
+            ("BR-EFF-11", "Alata Kokodo Community Library", "Alata Kokodo, Winneba", False),
         ]
-        
-        # Add 15 Target expansion branches to complete the 19 target branches requirement
-        target_locations = [
-            "Atekyedo Community", "Kwali Krew", "Gyahadze Branch", "Akosua Village Library",
-            "Nsimbo Library", "Abasraba Center", "Eyipey Community", "Sankor Sub-Library",
-            "Ghartey Hall Branch", "Osubonpanyin", "Pomadze Hub", "Winneba Junction Branch",
-            "Essuekyir Library", "Woarababa Post", "Zongo Ward Library"
-        ]
-
-        for i, loc in enumerate(target_locations, start=5):
-            branches_data.append({
-                "code": f"BR-EFF-{i:02d}",
-                "name": f"{loc} Branch Library",
-                "location": f"{loc}, Effutu",
-                "status": "target",
-                "is_hq": False
-            })
 
         db_branches = []
-        for b in branches_data:
-            br = Branch(**b)
+        for code, name, loc, is_hq in active_libraries:
+            br = Branch(code=code, name=name, location=loc, status="active", is_hq=is_hq)
             db.add(br)
             db_branches.append(br)
         db.commit()

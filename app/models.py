@@ -23,7 +23,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     member_id = Column(String(50), unique=True, index=True, nullable=True)
     full_name = Column(String(150), nullable=False)
-    email = Column(String(150), unique=True, index=True, nullable=False)
+    email = Column(String(150), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(30), nullable=False) # sys_admin, hq_admin, librarian, patron
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
@@ -32,7 +32,18 @@ class User(Base):
     id_number = Column(String(50), nullable=True)
     alt_contact = Column(String(150), nullable=True)
     phone = Column(String(50), nullable=True)
-    verification_status = Column(String(30), default="verified", nullable=True)
+    sex = Column(String(20), nullable=True) # Male, Female
+    school_occupation = Column(String(150), nullable=True)
+    location = Column(String(150), nullable=True)
+    verification_status = Column(String(30), default="pending", nullable=True) # pending, verified, rejected
+    verified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    verified_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    id_photo_url = Column(String(255), nullable=True)
+    guardian_name = Column(String(150), nullable=True)
+    guardian_phone = Column(String(50), nullable=True)
+    guardian_email = Column(String(150), nullable=True)
+    guardian_relationship = Column(String(50), nullable=True)
     is_approved = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
@@ -105,6 +116,30 @@ class Notification(Base):
 
     user = relationship("User", back_populates="notifications")
 
+class Reservation(Base):
+    __tablename__ = "reservations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    status = Column(String(30), default="reserved") # reserved, ready, collected, cancelled, expired
+    reserved_at = Column(DateTime, default=datetime.datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+
+    user = relationship("User")
+    book = relationship("Book")
+
+class UserPoint(Base):
+    __tablename__ = "user_points"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    points = Column(Integer, nullable=False)
+    reason = Column(String(200), nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
+
 class AILog(Base):
     __tablename__ = "ai_logs"
 
@@ -114,3 +149,15 @@ class AILog(Base):
     intent = Column(String(50), nullable=True)
     response = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class PasswordReset(Base):
+    __tablename__ = "password_resets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token = Column(String(100), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")

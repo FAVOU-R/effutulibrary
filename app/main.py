@@ -25,6 +25,10 @@ from app.controllers.book_controller import router as book_router
 from app.controllers.issue_controller import router as issue_router
 from app.controllers.ai_controller import router as ai_router
 from app.controllers.librarian_controller import router as librarian_router
+from app.controllers.reservation_controller import router as reservation_router
+from app.controllers.points_controller import router as points_router
+from app.controllers.reports_controller import router as reports_router
+from app.controllers.notifications_controller import router as notifications_router
 
 # Direct Module-Level FastAPI Application Instance
 app = FastAPI(
@@ -53,6 +57,10 @@ app.include_router(book_router)
 app.include_router(issue_router)
 app.include_router(ai_router)
 app.include_router(librarian_router)
+app.include_router(reservation_router)
+app.include_router(points_router)
+app.include_router(reports_router)
+app.include_router(notifications_router)
 
 @app.on_event("startup")
 def on_startup():
@@ -75,9 +83,19 @@ def on_startup():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type VARCHAR(50) DEFAULT 'ghanacard';",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS alt_contact VARCHAR(150);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'verified';",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS sex VARCHAR(20);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS school_occupation VARCHAR(150);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(150);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'pending';",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_by INTEGER;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_photo_url VARCHAR(255);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(150);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_phone VARCHAR(50);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_relationship VARCHAR(50);",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",

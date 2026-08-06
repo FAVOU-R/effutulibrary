@@ -31,6 +31,11 @@
 
                 <div class="flex items-center space-x-4">
                     {% if current_user %}
+                        <a href="/notifications" class="relative text-white hover:text-emerald-200 p-1.5" title="Notifications">
+                            <i class="fa-solid fa-bell text-lg"></i>
+                            <span id="notif-badge" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
+                        </a>
+
                         <div class="text-right hidden sm:block">
                             <div class="font-bold text-sm text-emerald-100">{{ current_user.full_name }}</div>
                             <span class="inline-block bg-emerald-900 text-emerald-300 text-xs px-2 py-0.5 rounded font-mono uppercase">
@@ -67,19 +72,28 @@
                 <span>Book Catalog</span>
             </a>
 
+            <a href="/leaderboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
+                <i class="fa-solid fa-trophy text-amber-500 w-5"></i>
+                <span>Reading Leaderboard</span>
+            </a>
+
             <a href="/scan-qr" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
                 <i class="fa-solid fa-qrcode text-emerald-600 w-5"></i>
                 <span>QR Quick Borrow</span>
             </a>
 
             {% if current_user.role in ['sys_admin', 'hq_admin', 'librarian'] %}
-            <a href="/users" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
+            <a href="/librarian/users" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
                 <i class="fa-solid fa-users text-emerald-600 w-5"></i>
-                <span>Registered Members</span>
+                <span>Manage Users</span>
             </a>
-            <a href="/catalog/add" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                <i class="fa-solid fa-plus-circle text-emerald-600 w-5"></i>
-                <span>Add Book (ISBN)</span>
+            <a href="/librarian/reservations" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
+                <i class="fa-solid fa-bookmark text-indigo-600 w-5"></i>
+                <span>Book Reservations</span>
+            </a>
+            <a href="/admin/reports" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
+                <i class="fa-solid fa-chart-column text-teal-600 w-5"></i>
+                <span>GLA Reports</span>
             </a>
             {% endif %}
 
@@ -144,6 +158,22 @@
 
     <script src="/static/js/scanner.js"></script>
     <script src="/static/js/chatbot.js"></script>
+    <script>
+    async function checkNotifications() {
+        try {
+            const res = await fetch('/api/notifications/unread-count');
+            if (res.ok) {
+                const data = await res.json();
+                const badge = document.getElementById('notif-badge');
+                if (badge && data.unread_count > 0) {
+                    badge.innerText = data.unread_count;
+                    badge.classList.remove('hidden');
+                }
+            }
+        } catch(e) {}
+    }
+    checkNotifications();
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

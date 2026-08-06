@@ -18,17 +18,13 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
 
-    # Email Configuration
-    MAIL_SERVER: str = os.getenv("MAIL_SERVER", os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com"))
-    MAIL_PORT: int = int(os.getenv("MAIL_PORT", os.getenv("BREVO_SMTP_PORT", "587")))
-    MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", os.getenv("BREVO_SMTP_USER", ""))
-    MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", os.getenv("BREVO_SMTP_PASSWORD", ""))
-    BREVO_SMTP_SERVER: str = MAIL_SERVER
-    BREVO_SMTP_PORT: int = MAIL_PORT
-    BREVO_SMTP_USER: str = MAIL_USERNAME
-    BREVO_SMTP_PASSWORD: str = MAIL_PASSWORD
-    SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "noreply@effutulibrary.gov.gh")
-
+    # Email Configuration - Brevo SMTP Config
+    MAIL_SERVER: str = os.getenv("EMAIL_HOST", os.getenv("MAIL_SERVER", "smtp-relay.brevo.com"))
+    MAIL_PORT: int = int(os.getenv("EMAIL_PORT", os.getenv("MAIL_PORT", "587")))
+    MAIL_USERNAME: str = os.getenv("EMAIL_USER", os.getenv("MAIL_USERNAME", "b4b291001@smtp-brevo.com"))
+    MAIL_PASSWORD: str = os.getenv("EMAIL_PASS", os.getenv("MAIL_PASSWORD", "xsmtpsib-73752bcefb7d8f83cea4ea97251db06731fb9674d2b9611b992b6fd596cb80db-nTxr2DoejSu2wJjo"))
+    SENDER_EMAIL: str = os.getenv("EMAIL_FROM", os.getenv("SENDER_EMAIL", "effutulibrarynetwork@gmail.com"))
+    SENDER_NAME: str = os.getenv("EMAIL_FROM_NAME", "Effutu Library Network")
 
     # Library Rules
     LOAN_PERIOD_DAYS: int = 14

@@ -13,27 +13,35 @@
 
     <div id="msg-alert" class="hidden mb-4 p-3 rounded text-xs font-semibold"></div>
 
-    <form id="register-form" method="post" action="/auth/register" class="space-y-4">
-        <!-- Library Selection Dropdown -->
+    <form id="register-form" method="post" action="/auth/register" enctype="multipart/form-data" class="space-y-4">
+        <!-- 1. SELECT YOUR LIBRARY * -->
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Your Library *</label>
             <select name="branch_id" id="branch_id" required class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
                 <option value="">-- Choose Library --</option>
                 {% if branches %}
                     {% for b in branches %}
-                        <option value="{{ b.id }}">{{ b.name }} ({{ b.location }})</option>
+                        {% if b.status == 'active' %}
+                            <option value="{{ b.id }}">{{ b.name }} ({{ b.location }})</option>
+                        {% endif %}
                     {% endfor %}
                 {% else %}
-                    <option value="1">Effutu Main Library - Winneba</option>
-                    <option value="2">Effutu UME Library</option>
-                    <option value="3">Effutu School Library</option>
-                    <option value="4">Nsakyir Library</option>
-                    <option value="5">Gyahadze Community Library</option>
+                    <option value="1">Effutu Municipal Library (Abasraba - Main)</option>
+                    <option value="2">Zagada Afadzinu Library (Akosua Village)</option>
+                    <option value="3">Nii Commey Library (WTWI)</option>
+                    <option value="4">Nana Amponsah Library (Atekyedo)</option>
+                    <option value="5">Neenyi Gyan Library (Ekroful)</option>
+                    <option value="6">Richard C. Ekem Library (Low Cost - ICT Centre)</option>
+                    <option value="7">Gyahadze Community Library</option>
+                    <option value="8">Nsakyir Community Library</option>
+                    <option value="9">UME Community Library</option>
+                    <option value="10">Unipra Basic School Library</option>
+                    <option value="11">Alata Kokodo Community Library</option>
                 {% endif %}
             </select>
         </div>
 
-        <!-- ID Type Dropdown -->
+        <!-- 2. ID TYPE * -->
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ID Type *</label>
             <select name="id_type" id="id_type" onchange="toggleIdField()" required class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
@@ -41,47 +49,96 @@
                 <option value="ghanacard">Ghana Card</option>
                 <option value="voters">Voters ID</option>
                 <option value="school_id">School ID</option>
-                <option value="not_available">Card not available at the moment</option>
+                <option value="not_available">Card not available at moment</option>
             </select>
         </div>
 
-        <!-- ID Number Field -->
+        <!-- 3. ID NUMBER * -->
         <div id="id_number_div">
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ID Number *</label>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1" id="id_number_label">ID Number *</label>
             <input type="text" name="id_number" id="id_number" placeholder="Enter ID number" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
         </div>
 
-        <!-- Alternative Contact Field (if ID not available) -->
-        <div id="no_card_div" style="display:none;">
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Guardian Phone / School Name *</label>
-            <input type="text" name="alt_contact" id="alt_contact" placeholder="Enter guardian phone or school name for verification" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
-            <p class="text-[12px] text-amber-600 font-semibold mt-1">You will need to present your ID on first visit to library</p>
+        <!-- Parent / Guardian Details (shown if ID not available) -->
+        <div id="no_card_div" class="space-y-3 bg-amber-50 p-3 rounded-lg border border-amber-200" style="display:none;">
+            <p class="text-xs font-bold text-amber-800 uppercase border-b border-amber-200 pb-1"><i class="fa-solid fa-user-shield"></i> Parent / Guardian Verification Info</p>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Guardian Name *</label>
+                <input type="text" name="guardian_name" id="guardian_name" placeholder="e.g. Ama Mensah" class="w-full px-3 py-1.5 border border-slate-300 rounded text-sm bg-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Guardian Phone *</label>
+                <input type="tel" name="guardian_phone" id="guardian_phone" placeholder="024XXXXXXX" class="w-full px-3 py-1.5 border border-slate-300 rounded text-sm bg-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Guardian Email <span class="text-slate-400 font-normal">(Optional)</span></label>
+                <input type="email" name="guardian_email" id="guardian_email" placeholder="parent@gmail.com" class="w-full px-3 py-1.5 border border-slate-300 rounded text-sm bg-white">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Relationship *</label>
+                <select name="guardian_relationship" id="guardian_relationship" class="w-full px-3 py-1.5 border border-slate-300 rounded text-sm bg-white">
+                    <option value="Father">Father</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Guardian">Guardian</option>
+                    <option value="Teacher">Teacher</option>
+                </select>
+            </div>
+            <p class="text-[11px] text-amber-700 font-semibold mt-1">⏳ Awaiting verification - Visit library with ID</p>
         </div>
 
-        <!-- Full Name -->
+        <!-- 4. FULL NAME * -->
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
             <input type="text" name="full_name" required placeholder="e.g. Kwame Mensah" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
         </div>
 
-        <!-- Phone -->
+        <!-- 5. SEX * -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Sex *</label>
+            <select name="sex" required class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm bg-white">
+                <option value="">-- Select Sex --</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+            </select>
+        </div>
+
+        <!-- 6. PHONE NUMBER * -->
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number *</label>
             <input type="tel" name="phone" required placeholder="024XXXXXXX" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
         </div>
 
-        <!-- Email -->
+        <!-- 7. SCHOOL / OCCUPATION (Optional) -->
         <div>
-            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
-            <input type="email" name="email" placeholder="kwame@gmail.com" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">School / Occupation <span class="text-slate-400 font-normal">(Optional)</span></label>
+            <input type="text" name="school_occupation" placeholder="e.g. Winneba SHS / Trader" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
         </div>
 
-        <!-- Password -->
+        <!-- 8. LOCATION / COMMUNITY (Optional) -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Location / Community <span class="text-slate-400 font-normal">(Optional)</span></label>
+            <input type="text" name="location" placeholder="e.g. Winneba, Nsakyir, Gyahadze" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
+        </div>
+
+        <!-- 9. EMAIL ADDRESS (Optional) -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address <span class="text-slate-400 font-normal">(Optional)</span></label>
+            <input type="email" name="email" placeholder="kwame@gmail.com" value="" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
+        </div>
+
+        <!-- 10. PASSWORD * -->
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password *</label>
             <input type="password" name="password" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-sm">
         </div>
 
+        <!-- 11. Upload ID Photo (Optional) -->
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Upload ID Photo <span class="text-slate-400 font-normal">(Optional)</span></label>
+            <input type="file" name="id_photo" accept="image/*" class="w-full px-3 py-1.5 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 text-xs bg-white">
+        </div>
+
+        <!-- 12. Submit Button -->
         <button type="submit" class="w-full btn-effutu py-2.5 text-sm font-bold shadow">
             Complete Registration
         </button>
@@ -102,6 +159,7 @@ function toggleIdField() {
     const noCardDiv = document.getElementById('no_card_div');
     const idInput = document.getElementById('id_number');
     const altInput = document.getElementById('alt_contact');
+    const idLabel = document.getElementById('id_number_label');
     
     if (idType === 'not_available') {
         idDiv.style.display = 'none';
@@ -114,10 +172,19 @@ function toggleIdField() {
         idInput.required = true;
         if (altInput) altInput.required = false;
         
-        if (idType === 'ghanacard') idInput.placeholder = 'GHA-XXXXXXXXX-X';
-        else if (idType === 'voters') idInput.placeholder = 'Enter Voters ID number';
-        else if (idType === 'school_id') idInput.placeholder = 'Enter School ID number';
-        else idInput.placeholder = 'Enter ID number';
+        if (idType === 'ghanacard') {
+            idInput.placeholder = 'GHA-XXXXXXXX-X';
+            idLabel.textContent = 'Ghana Card Number *';
+        } else if (idType === 'voters') {
+            idInput.placeholder = '1234567890';
+            idLabel.textContent = 'Voters ID Number *';
+        } else if (idType === 'school_id') {
+            idInput.placeholder = 'e.g. SCH/1234';
+            idLabel.textContent = 'School ID Number *';
+        } else {
+            idInput.placeholder = 'Enter ID number';
+            idLabel.textContent = 'ID Number *';
+        }
     }
 }
 

@@ -16,6 +16,8 @@ def require_librarian(current_user: User = Depends(get_current_user)):
 @router.get("/users", response_class=HTMLResponse)
 async def list_users(
     request: Request,
+    q: str = "",
+    v_filter: str = "all",
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian)
 ):
@@ -23,6 +25,23 @@ async def list_users(
     if current_user.role == "librarian":
         query = query.filter(User.branch_id == current_user.branch_id)
     
+    if q.strip():
+        search_term = f"%{q.strip().lower()}%"
+        query = query.filter(
+            (User.full_name.ilike(search_term)) |
+            (User.phone.ilike(search_term)) |
+            (User.id_number.ilike(search_term)) |
+            (User.ghana_card_number.ilike(search_term)) |
+            (User.member_id.ilike(search_term))
+        )
+    
+    if v_filter == "pending":
+        query = query.filter((User.verification_status == "pending") | (User.is_physically_verified == False))
+    elif v_filter == "verified":
+        query = query.filter((User.verification_status == "verified") & (User.is_physically_verified == True))
+    elif v_filter == "rejected":
+        query = query.filter(User.verification_status == "rejected")
+
     users = query.order_by(User.id.desc()).all()
     rows = ""
     for u in users:
@@ -34,16 +53,21 @@ async def list_users(
         id_type_label = (u.id_type or 'ghanacard').upper().replace('_', ' ')
 
         if u.verification_status == "pending" or not u.is_physically_verified:
-            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded'>Pending Verification</span>"
+            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded'>⏳ Pending</span>"
+        elif u.verification_status == "rejected":
+            v_badge = f"<span class='px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded' title='{u.rejection_reason or ''}'>❌ Rejected</span>"
         else:
-            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>✓ Verified</span>"
+            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>✅ Verified</span>"
+
+        photo_link = f"<a href='{u.id_photo_url}' target='_blank' class='text-blue-600 font-bold hover:underline text-[11px]'><i class='fa-solid fa-image'></i> View Photo</a>" if u.id_photo_url else "<span class='text-slate-400'>No Photo</span>"
+        branch_name = u.branch.name if u.branch else "Main Branch"
 
         rows += f"""
         <tr class='border-b border-slate-200 hover:bg-slate-50 transition text-xs'>
             <td class='p-3 font-mono font-bold text-emerald-800'>{u.member_id or f'ID-{u.id}'}</td>
-            <td class='p-3 font-bold text-slate-800'>{u.full_name}</td>
-            <td class='p-3 font-mono text-slate-600'>{u.email or u.phone or '-'}</td>
-            <td class='p-3 font-mono text-slate-600'><b>{id_type_label}:</b> {id_disp}</td>
+            <td class='p-3 font-bold text-slate-800'>{u.full_name}<br><span class='text-[10px] text-slate-400 font-normal'>{u.sex or '-'} • {u.school_occupation or 'Patron'}</span></td>
+            <td class='p-3 font-mono text-slate-600'>{u.phone or u.email or '-'}<br><span class='text-[10px] text-slate-400'>{u.location or branch_name}</span></td>
+            <td class='p-3 font-mono text-slate-600'><b>{id_type_label}:</b> {id_disp}<br>{photo_link}</td>
             <td class='p-3 uppercase font-bold text-slate-500'>{u.role.replace('_', ' ')}</td>
             <td class='p-3'>{status_badge}</td>
             <td class='p-3'>{v_badge}</td>
@@ -51,9 +75,13 @@ async def list_users(
                 <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
                     <button class='px-2 py-1 text-white font-bold rounded text-[11px] {active_btn_color}'>{active_btn_label}</button>
                 </form>
-                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px]">Verify & Activate</button></form>' if (not u.is_physically_verified or u.verification_status == "pending") else ''}
+                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px]">Verify</button></form>' if (u.verification_status != 'verified') else ''}
+                {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px] inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
                 <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline'>
                     <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px]'>Reset Pwd</button>
+                </form>
+                <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
+                    <button class='px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-trash'></i></button>
                 </form>
             </td>
         </tr>
@@ -69,11 +97,11 @@ async def list_users(
         <title>Manage Users - Librarian Control Panel</title>
     </head>
     <body class="bg-slate-100 min-h-screen p-6 font-sans">
-        <div class="max-w-6xl mx-auto space-y-6">
+        <div class="max-w-7xl mx-auto space-y-6">
             <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-slate-800">User Management - Librarian Control Desk</h2>
-                    <p class="text-xs text-slate-500">Manage enrolled patrons, ID verifications, account activations, & password resets</p>
+                    <h2 class="text-2xl font-extrabold text-slate-800">User Management Desk</h2>
+                    <p class="text-xs text-slate-500">Manage patron enrollments, ID verifications, account status, & credentials</p>
                 </div>
                 <div class="flex gap-2">
                     <a href="/librarian/users/add" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow transition">
@@ -85,15 +113,31 @@ async def list_users(
                 </div>
             </div>
 
+            <!-- Filters & Search -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                <form method="get" action="/librarian/users" class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <input type="text" name="q" value="{q}" placeholder="Search name, phone, ID..." class="px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-emerald-500 w-64">
+                    
+                    <select name="v_filter" onchange="this.form.submit()" class="px-3 py-1.5 border border-slate-300 rounded text-xs bg-white font-bold text-slate-700">
+                        <option value="all" {'selected' if v_filter == 'all' else ''}>All Verifications</option>
+                        <option value="pending" {'selected' if v_filter == 'pending' else ''}>⏳ Pending (Yellow)</option>
+                        <option value="verified" {'selected' if v_filter == 'verified' else ''}>✅ Verified (Green)</option>
+                        <option value="rejected" {'selected' if v_filter == 'rejected' else ''}>❌ Rejected (Red)</option>
+                    </select>
+
+                    <button type="submit" class="px-3 py-1.5 bg-slate-800 text-white font-bold text-xs rounded">Filter</button>
+                </form>
+            </div>
+
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100 uppercase text-slate-500 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="p-3">Member ID</th>
-                                <th class="p-3">Full Name</th>
-                                <th class="p-3">Contact</th>
-                                <th class="p-3">ID Type / Details</th>
+                                <th class="p-3">Full Name / Details</th>
+                                <th class="p-3">Contact / Location</th>
+                                <th class="p-3">ID Type / Photo</th>
                                 <th class="p-3">Role</th>
                                 <th class="p-3">Status</th>
                                 <th class="p-3">Verification</th>
@@ -101,12 +145,39 @@ async def list_users(
                             </tr>
                         </thead>
                         <tbody>
-                            {rows if rows else "<tr><td colspan='8' class='p-8 text-center text-slate-400'>No users registered under this branch.</td></tr>"}
+                            {rows if rows else "<tr><td colspan='8' class='p-8 text-center text-slate-400'>No users found matching your search.</td></tr>"}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- Reject Modal -->
+        <div id="rejectModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+                <h3 class="text-lg font-bold text-slate-800">Reject User Verification</h3>
+                <form id="rejectForm" method="post" action="" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Rejection Reason *</label>
+                        <textarea name="reason" required placeholder="e.g. ID photo unclear / Invalid ID number" class="w-full p-2 border border-slate-300 rounded text-xs h-24 focus:ring-2 focus:ring-rose-500"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" onclick="closeRejectModal()" class="px-3 py-1.5 bg-slate-200 text-slate-700 font-bold text-xs rounded">Cancel</button>
+                        <button type="submit" class="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        function openRejectModal(userId) {{
+            document.getElementById('rejectForm').action = '/librarian/users/' + userId + '/reject';
+            document.getElementById('rejectModal').classList.remove('hidden');
+        }}
+        function closeRejectModal() {{
+            document.getElementById('rejectModal').classList.add('hidden');
+        }}
+        </script>
     </body>
     </html>
     """)
@@ -255,6 +326,8 @@ async def verify_physical(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian)
 ):
+    from app.models import UserPoint, Notification
+    import datetime
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
         return HTMLResponse("<h3>User not found</h3>", status_code=404)
@@ -263,7 +336,35 @@ async def verify_physical(
     u.verification_status = "verified"
     u.is_approved = True
     u.is_active = True
+    u.verified_by = current_user.id
+    u.verified_at = datetime.datetime.utcnow()
+
+    # Award +10 verification points
+    point_entry = UserPoint(user_id=u.id, points=10, reason="Account ID Verification Bonus")
+    db.add(point_entry)
+
+    # Create notification
+    notif = Notification(
+        user_id=u.id,
+        title="Account Verified! 🎉",
+        message="Your library account is now fully verified. You can borrow up to 3 books at any branch.",
+        type="success"
+    )
+    db.add(notif)
     db.commit()
+
+    # Dispatch Verification Email
+    try:
+        branch_name = u.branch.name if u.branch else "Effutu Municipal Library"
+        if u.email:
+            send_email(
+                u.email,
+                f"✅ Account Verified - Effutu Library",
+                f"<h3>Akwaaba {u.full_name}!</h3><p>✅ Verified! You can now borrow 3 books at {branch_name}.</p><p>You have also earned <b>+10 Reading Points</b>!</p>"
+            )
+    except Exception as ex:
+        print(f"[VERIFY EMAIL DISPATCH WARNING] {ex}")
+
     return RedirectResponse(url="/librarian/users", status_code=303)
 
 @router.post("/users/{user_id}/reset-pwd", response_class=HTMLResponse)
