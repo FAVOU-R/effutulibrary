@@ -61,7 +61,11 @@ def seed_database():
             hashed_password=hashed_pw,
             role="sys_admin",
             branch_id=db_branches[0].id,
-            is_approved=True
+            ghana_card_number="GHA-000000001-1",
+            is_approved=True,
+            is_active=True,
+            must_change_password=False,
+            is_physically_verified=True
         )
 
         # HQ Admin
@@ -72,7 +76,11 @@ def seed_database():
             hashed_password=hashed_pw,
             role="hq_admin",
             branch_id=db_branches[0].id,
-            is_approved=True
+            ghana_card_number="GHA-000000002-2",
+            is_approved=True,
+            is_active=True,
+            must_change_password=False,
+            is_physically_verified=True
         )
 
         # Librarian (Winneba Community Library)
@@ -83,7 +91,11 @@ def seed_database():
             hashed_password=hashed_pw,
             role="librarian",
             branch_id=db_branches[1].id,
-            is_approved=True
+            ghana_card_number="GHA-000000003-3",
+            is_approved=True,
+            is_active=True,
+            must_change_password=False,
+            is_physically_verified=True
         )
 
         # Approved Patron
@@ -94,20 +106,30 @@ def seed_database():
             hashed_password=hashed_pw,
             role="patron",
             branch_id=db_branches[0].id,
-            is_approved=True
+            ghana_card_number="GHA-123456789-1",
+            is_approved=True,
+            is_active=True,
+            must_change_password=False,
+            is_physically_verified=True
         )
 
-        # Pending Patron (Awaiting Librarian Approval)
+        # Pending Patron (Awaiting Physical Ghana Card Verification)
         pending_patron = User(
+            member_id="EFF-MBR-1002",
             full_name="Ama Serwaa",
             email="pending_patron@gmail.com",
             hashed_password=hashed_pw,
             role="patron",
             branch_id=db_branches[1].id,
-            is_approved=False
+            ghana_card_number="GHA-987654321-9",
+            is_approved=True,
+            is_active=True,
+            must_change_password=True,
+            is_physically_verified=False
         )
 
         db.add_all([sys_admin, hq_admin, librarian, patron, pending_patron])
+
         db.commit()
         print("[SEED] Created role users: System Admin, HQ Admin, Librarian, Patron, Pending Patron.")
 

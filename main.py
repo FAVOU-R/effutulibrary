@@ -17,6 +17,7 @@ from app.controllers.user_controller import router as user_router
 from app.controllers.book_controller import router as book_router
 from app.controllers.issue_controller import router as issue_router
 from app.controllers.ai_controller import router as ai_router
+from app.controllers.librarian_controller import router as librarian_router
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -39,6 +40,8 @@ app.include_router(user_router)
 app.include_router(book_router)
 app.include_router(issue_router)
 app.include_router(ai_router)
+app.include_router(librarian_router)
+
 
 @app.on_event("startup")
 def on_startup():
@@ -196,7 +199,24 @@ def add_book_page(request: Request, db: Session = Depends(get_db)):
         "branches": branches
     })
 
+@app.get("/users", response_class=HTMLResponse)
+def users_directory_page(request: Request, db: Session = Depends(get_db)):
+    current_user = get_current_user(request, db)
+    if current_user.role not in ["sys_admin", "hq_admin", "librarian"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    query = db.query(User)
+    if current_user.role == "librarian":
+        query = query.filter(User.branch_id == current_user.branch_id)
+
+    users = query.order_by(User.id.desc()).all()
+    return templates.TemplateResponse(request=request, name="users/index.html", context={
+        "current_user": current_user,
+        "users": users
+    })
+
 @app.get("/scan-qr", response_class=HTMLResponse)
+
 def qr_scan_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     return templates.TemplateResponse(request=request, name="catalog/qr_scan.html", context={
