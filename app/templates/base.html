@@ -73,11 +73,16 @@
             </a>
 
             {% if current_user.role in ['sys_admin', 'hq_admin', 'librarian'] %}
+            <a href="/users" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
+                <i class="fa-solid fa-users text-emerald-600 w-5"></i>
+                <span>Registered Members</span>
+            </a>
             <a href="/catalog/add" class="flex items-center space-x-3 px-3 py-2.5 rounded-md font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
                 <i class="fa-solid fa-plus-circle text-emerald-600 w-5"></i>
                 <span>Add Book (ISBN)</span>
             </a>
             {% endif %}
+
 
             <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 mt-4 mb-1">AI Tools</div>
             <button data-query="Recommend books for WASSCE exam" class="quick-ai-btn text-left flex items-center space-x-3 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-emerald-50 rounded">

@@ -1,4 +1,4 @@
-/* Universal Live AI Assistant Chatbot Widget Handler */
+/* Universal Live AI Assistant Chatbot Widget Handler for Grok AI */
 
 document.addEventListener("DOMContentLoaded", function() {
   const toggleBtn = document.getElementById("chatbot-toggle");
@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function openChatbot() {
     windowEl.classList.remove("hidden");
     windowEl.style.display = "flex";
-    inputEl.focus();
+    if (inputEl) inputEl.focus();
   }
 
   function closeChatbot() {
@@ -65,17 +65,18 @@ document.addEventListener("DOMContentLoaded", function() {
     if (!promptText.trim()) return;
     
     appendMessage(promptText, "user");
-    inputEl.value = "";
+    if (inputEl) inputEl.value = "";
 
     try {
-      const res = await fetch("/api/ai/chatbot", {
+      const res = await fetch("/ai/chat-boy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptText })
+        body: JSON.stringify({ question: promptText, prompt: promptText })
       });
       const data = await res.json();
-      if (data.response) {
-        appendMessage(data.response, "bot");
+      const reply = data.answer || data.response;
+      if (reply) {
+        appendMessage(reply, "bot");
       } else {
         appendMessage("Sorry, I encountered an issue fetching AI insights.", "bot");
       }
@@ -84,15 +85,19 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   }
 
-  sendBtn.addEventListener("click", () => {
-    submitQuery(inputEl.value);
-  });
-
-  inputEl.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
+  if (sendBtn) {
+    sendBtn.addEventListener("click", () => {
       submitQuery(inputEl.value);
-    }
-  });
+    });
+  }
+
+  if (inputEl) {
+    inputEl.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        submitQuery(inputEl.value);
+      }
+    });
+  }
 
   // Quick Action Buttons inside chatbot & sidebar
   document.addEventListener("click", (e) => {

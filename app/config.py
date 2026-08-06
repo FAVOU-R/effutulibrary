@@ -18,12 +18,17 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 # 24 hours
 
-    # Brevo Email Configuration
-    BREVO_SMTP_SERVER: str = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com")
-    BREVO_SMTP_PORT: int = int(os.getenv("BREVO_SMTP_PORT", "587"))
-    BREVO_SMTP_USER: str = os.getenv("BREVO_SMTP_USER", "b428a1001@smtp-brevo.com")
-    BREVO_SMTP_PASSWORD: str = os.getenv("BREVO_SMTP_PASSWORD", "brevo-smtp-key")
+    # Email Configuration
+    MAIL_SERVER: str = os.getenv("MAIL_SERVER", os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com"))
+    MAIL_PORT: int = int(os.getenv("MAIL_PORT", os.getenv("BREVO_SMTP_PORT", "587")))
+    MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", os.getenv("BREVO_SMTP_USER", ""))
+    MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", os.getenv("BREVO_SMTP_PASSWORD", ""))
+    BREVO_SMTP_SERVER: str = MAIL_SERVER
+    BREVO_SMTP_PORT: int = MAIL_PORT
+    BREVO_SMTP_USER: str = MAIL_USERNAME
+    BREVO_SMTP_PASSWORD: str = MAIL_PASSWORD
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "noreply@effutulibrary.gov.gh")
+
 
     # Library Rules
     LOAN_PERIOD_DAYS: int = 14

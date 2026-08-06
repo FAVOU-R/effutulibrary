@@ -9,6 +9,30 @@ from app.services.email_service import send_approval_email
 
 router = APIRouter(prefix="/api/users", tags=["Users"])
 
+@router.get("/all")
+def list_all_users(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["sys_admin", "hq_admin", "librarian"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    query = db.query(User)
+    if current_user.role == "librarian":
+        query = query.filter(User.branch_id == current_user.branch_id)
+
+    users = query.order_by(User.id.desc()).all()
+    return [{
+        "id": u.id,
+        "member_id": u.member_id or "Pending Approval",
+        "full_name": u.full_name,
+        "email": u.email,
+        "role": u.role,
+        "branch_name": u.branch.name if u.branch else "Unassigned",
+        "is_approved": u.is_approved,
+        "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
+    } for u in users]
+
 @router.get("/pending")
 def list_pending_users(
     current_user: User = Depends(get_current_user),
@@ -27,6 +51,7 @@ def list_pending_users(
         "branch_name": u.branch.name if u.branch else "Unassigned",
         "created_at": u.created_at.strftime("%Y-%m-%d %H:%M")
     } for u in pending]
+
 
 @router.post("/approve/{user_id}")
 def approve_user(

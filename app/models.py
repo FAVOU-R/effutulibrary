@@ -27,8 +27,13 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     role = Column(String(30), nullable=False) # sys_admin, hq_admin, librarian, patron
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
-    is_approved = Column(Boolean, default=False)
+    ghana_card_number = Column(String(50), unique=True, index=True, nullable=True)
+    is_approved = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    must_change_password = Column(Boolean, default=True)
+    is_physically_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
     branch = relationship("Branch", back_populates="users")
     transactions = relationship("Transaction", foreign_keys="Transaction.patron_id", back_populates="patron")
