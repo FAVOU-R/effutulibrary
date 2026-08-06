@@ -1,0 +1,9 @@
+try:
+    from main import app
+except ImportError:
+    try:
+        from app.main import app
+    except ImportError:
+        import sys, os
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from main import app

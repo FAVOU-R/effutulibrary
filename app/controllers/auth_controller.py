@@ -137,7 +137,7 @@ async def register(
     # Validate Ghana Card format
     if not re.match(r'^GHA-\d{9}-\d{1}$', card_clean):
         return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
+        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Invalid Ghana Card Format</h3>
             <p>Correct format is <b>GHA-123456789-1</b></p>
             <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>
@@ -146,7 +146,7 @@ async def register(
 
     if db.query(User).filter(User.email == email_clean).first():
         return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
+        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Email Already Registered</h3>
             <p>An account with this email address already exists.</p>
             <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>
@@ -155,7 +155,7 @@ async def register(
 
     if db.query(User).filter(User.ghana_card_number == card_clean).first():
         return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
+        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Ghana Card Already Registered</h3>
             <p>This Ghana Card is already associated with an account. Only one account is permitted per Ghana Card.</p>
             <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>

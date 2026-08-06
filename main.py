@@ -7,8 +7,14 @@ import os
 
 from app.config import settings
 from app.database import get_db, engine, Base
-from app.models import Branch, User, Book, BookCopy, Transaction
-from seed_data import seed_database
+try:
+    from seed_data import seed_database
+except ImportError:
+    try:
+        from app.seed_data import seed_database
+    except ImportError:
+        seed_database = None
+
 
 # Include API Controllers
 from app.controllers.auth_controller import router as auth_router, get_current_user_optional, get_current_user
@@ -46,7 +52,12 @@ app.include_router(librarian_router)
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
-    seed_database()
+    if seed_database:
+        try:
+            seed_database()
+        except Exception as e:
+            print(f"[STARTUP WARNING] Seed database exception: {e}")
+
 
 # --- HTML Template Views ---
 
