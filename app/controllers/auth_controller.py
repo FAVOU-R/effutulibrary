@@ -73,8 +73,23 @@ def send_email(to_email: str, subject: str, body_html: str) -> bool:
         return False
 
 @router.get("/register", response_class=HTMLResponse)
-async def register_page():
-    return HTMLResponse("""
+async def register_page(db: Session = Depends(get_db)):
+    from app.models import Branch
+    branches = db.query(Branch).filter(Branch.status == "active").all()
+    branch_options = ""
+    if branches:
+        for b in branches:
+            branch_options += f'<option value="{b.id}">{b.name} ({b.location})</option>'
+    else:
+        branch_options = """
+        <option value="1">Effutu Main Library - Winneba</option>
+        <option value="2">Effutu UME Library</option>
+        <option value="3">Effutu School Library</option>
+        <option value="4">Nsakyir Library</option>
+        <option value="5">Gyahadze Community Library</option>
+        """
+
+    return HTMLResponse(f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -90,34 +105,85 @@ async def register_page():
             <div class="text-center">
                 <i class="fa-solid fa-book-bookmark text-4xl text-emerald-600 mb-2"></i>
                 <h2 class="text-2xl font-extrabold text-slate-800">Effutu Library Enrollment</h2>
-                <p class="text-xs text-slate-500">Auto-Approval via Official Ghana Card Verification</p>
+                <p class="text-xs text-slate-500">Join the Municipal Library Network</p>
             </div>
             <form method="post" action="/auth/register" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Select Your Library *</label>
+                    <select name="branch_id" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:border-emerald-600 focus:outline-none">
+                        <option value="">-- Choose Library --</option>
+                        {branch_options}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ID Type *</label>
+                    <select name="id_type" id="id_type" onchange="toggleIdField()" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white focus:border-emerald-600 focus:outline-none">
+                        <option value="">-- Select ID Type --</option>
+                        <option value="ghanacard">Ghana Card</option>
+                        <option value="voters">Voters ID</option>
+                        <option value="school_id">School ID</option>
+                        <option value="not_available">Card not available at the moment</option>
+                    </select>
+                </div>
+                <div id="id_number_div">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ID Number *</label>
+                    <input type="text" name="id_number" id="id_number" placeholder="Enter ID number" class="w-full text-sm font-mono border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div id="no_card_div" style="display:none;">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Guardian Phone / School Name *</label>
+                    <input type="text" name="alt_contact" id="alt_contact" placeholder="Enter guardian phone or school name for verification" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <p class="text-[12px] text-amber-600 font-semibold mt-1">You will need to present your ID on first visit to library</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
                     <input name="full_name" placeholder="e.g. Kwame Mensah" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number *</label>
+                    <input name="phone" type="tel" placeholder="024XXXXXXX" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
-                    <input name="email" type="email" placeholder="kwame@gmail.com" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <input name="email" type="email" placeholder="kwame@gmail.com" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ghana Card Number</label>
-                    <input name="ghana_card_number" placeholder="GHA-123456789-1" required pattern="GHA-[0-9]{9}-[0-9]{1}" class="w-full text-sm font-mono border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none uppercase">
-                    <small class="text-[11px] text-slate-400">Required Format: GHA-123456789-1</small>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Preferred Home Branch ID</label>
-                    <input name="branch_id" type="number" value="1" placeholder="Branch ID" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password *</label>
+                    <input name="password" type="password" placeholder="••••••••" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg shadow transition">
-                    Enroll with Ghana Card
+                    Complete Registration
                 </button>
             </form>
             <div class="text-center pt-2 border-t border-slate-100">
                 <a href="/auth/login" class="text-xs text-emerald-700 hover:underline font-semibold">Already have an account? Sign In</a>
             </div>
         </div>
+        <script>
+        function toggleIdField() {{
+            const idType = document.getElementById('id_type').value;
+            const idDiv = document.getElementById('id_number_div');
+            const noCardDiv = document.getElementById('no_card_div');
+            const idInput = document.getElementById('id_number');
+            const altInput = document.getElementById('alt_contact');
+            
+            if (idType === 'not_available') {{
+                idDiv.style.display = 'none';
+                noCardDiv.style.display = 'block';
+                idInput.required = false;
+                if (altInput) altInput.required = true;
+            }} else {{
+                idDiv.style.display = 'block';
+                noCardDiv.style.display = 'none';
+                idInput.required = true;
+                if (altInput) altInput.required = false;
+                
+                if (idType === 'ghanacard') idInput.placeholder = 'GHA-XXXXXXXXX-X';
+                else if (idType === 'voters') idInput.placeholder = 'Enter Voters ID number';
+                else if (idType === 'school_id') idInput.placeholder = 'Enter School ID number';
+                else idInput.placeholder = 'Enter ID number';
+            }}
+        }}
+        </script>
     </body>
     </html>
     """)
@@ -126,123 +192,67 @@ async def register_page():
 async def register(
     request: Request,
     full_name: str = Form(...),
-    email: str = Form(...),
-    ghana_card_number: str = Form(...),
+    email: str = Form(""),
+    phone: str = Form(""),
+    password: str = Form(...),
     branch_id: int = Form(1),
+    id_type: str = Form("ghanacard"),
+    id_number: str = Form(""),
+    alt_contact: str = Form(""),
     db: Session = Depends(get_db)
 ):
-    email_clean = email.lower().strip()
-    card_clean = ghana_card_number.upper().strip()
+    wants_json = "application/json" in request.headers.get("accept", "").lower()
+    email_clean = email.lower().strip() if email else f"{phone.strip()}@effutulibrary.org"
+    phone_clean = phone.strip()
+    id_number_clean = id_number.strip() if id_number else None
+    alt_contact_clean = alt_contact.strip() if alt_contact else None
 
-    # Validate Ghana Card format
-    if not re.match(r'^GHA-\d{9}-\d{1}$', card_clean):
-        return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
-            <h3 style='color:#dc2626;'>Invalid Ghana Card Format</h3>
-            <p>Correct format is <b>GHA-123456789-1</b></p>
-            <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>
-        </div>
-        """, status_code=400)
+    # Duplicate Checks
+    if email_clean and db.query(User).filter(User.email == email_clean).first():
+        msg = "An account with this email address already exists."
+        if wants_json: return JSONResponse(status_code=400, content={"error": msg})
+        return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
 
-    if db.query(User).filter(User.email == email_clean).first():
-        return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
-            <h3 style='color:#dc2626;'>Email Already Registered</h3>
-            <p>An account with this email address already exists.</p>
-            <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>
-        </div>
-        """, status_code=400)
+    if phone_clean and db.query(User).filter(User.phone == phone_clean).first():
+        msg = "An account with this phone number already exists."
+        if wants_json: return JSONResponse(status_code=400, content={"error": msg})
+        return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
 
-    if db.query(User).filter(User.ghana_card_number == card_clean).first():
-        return HTMLResponse("""
-        <div style='max-width:500px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
-            <h3 style='color:#dc2626;'>Ghana Card Already Registered</h3>
-            <p>This Ghana Card is already associated with an account. Only one account is permitted per Ghana Card.</p>
-            <a href='/auth/register' style='color:#2563eb;'>← Back to Registration</a>
-        </div>
-        """, status_code=400)
+    ghana_card = id_number_clean.upper() if (id_type == "ghanacard" and id_number_clean) else None
+    if ghana_card and db.query(User).filter(User.ghana_card_number == ghana_card).first():
+        msg = "This Ghana Card is already registered with an account."
+        if wants_json: return JSONResponse(status_code=400, content={"error": msg})
+        return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
 
-    # Generate default password
-    default_password = f"Effutu@{random.randint(1000, 9999)}"
     member_num = random.randint(1000, 9999)
     member_id = f"EFF-MBR-{member_num}"
+    verification_status = "pending" if id_type == "not_available" else "verified"
 
     user = User(
         full_name=full_name.strip(),
         email=email_clean,
-        ghana_card_number=card_clean,
+        phone=phone_clean,
+        ghana_card_number=ghana_card,
+        id_type=id_type,
+        id_number=id_number_clean,
+        alt_contact=alt_contact_clean,
+        verification_status=verification_status,
         member_id=member_id,
-        hashed_password=get_password_hash(default_password),
+        hashed_password=get_password_hash(password),
         branch_id=branch_id,
         role="patron",
         is_approved=True,
         is_active=True,
-        must_change_password=True,
-        is_physically_verified=False
+        must_change_password=False,
+        is_physically_verified=(id_type != "not_available")
     )
     db.add(user)
     db.commit()
 
-    base_url = str(request.base_url).rstrip('/')
-    email_body = f"""
-    <html><body style='font-family:Arial, sans-serif; line-height:1.6; color:#1e293b;'>
-    <div style='max-width:600px; margin:0 auto; border:1px solid #cbd5e1; border-radius:8px; padding:24px; background:#ffffff;'>
-        <h2 style='color:#15803d; margin-top:0;'>Effutu Municipal Library Network</h2>
-        <p>Dear <b>{full_name}</b>,</p>
-        <p>Welcome to the Effutu Municipal Library Network in Winneba, Central Region, Ghana!</p>
-        <p>Your library account has been created and <b>automatically approved</b> following verification of your Ghana Card (<b>{card_clean[:4]}XXXXXX{card_clean[-3:]}</b>).</p>
-        
-        <div style='background:#f0fdf4; border:1px solid #86efac; border-radius:6px; padding:16px; margin:16px 0;'>
-            <h4 style='margin:0 0 8px 0; color:#166534;'>Your Account Credentials:</h4>
-            <p style='margin:4px 0;'><b>Member ID:</b> <font color='#15803d'>{member_id}</font></p>
-            <p style='margin:4px 0;'><b>Login Email:</b> {email_clean}</p>
-            <p style='margin:4px 0;'><b>Default Password:</b> <code style='font-size:16px; background:#dcfce7; padding:2px 6px; border-radius:4px;'>{default_password}</code></p>
-        </div>
+    if wants_json:
+        return JSONResponse(content={"message": "Registration successful! You can now log in.", "member_id": member_id})
 
-        <p><b>Next Steps:</b></p>
-        <ol>
-            <li>Log in at: <a href='{base_url}/auth/login'>{base_url}/auth/login</a></li>
-            <li>You will be prompted to change your default password immediately.</li>
-            <li>On your first visit to your branch library, please present your <b>physical Ghana Card</b> for final physical verification and collection of your library card.</li>
-        </ol>
-        <p style='color:#64748b; font-size:12px;'>For assistance, please visit any of the 19 Effutu municipal library branches.</p>
-        <p>Warm regards,<br><b>Effutu Municipal Library Management</b></p>
-    </div>
-    </body></html>
-    """
-    send_email(email_clean, "Your Effutu Library Account - Default Password & Next Steps", email_body)
-
-    return HTMLResponse(f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <script src="https://cdn.tailwindcss.com"></script>
-        <title>Registration Successful - Effutu Library</title>
-    </head>
-    <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-slate-200 rounded-xl shadow-lg p-6 text-center space-y-4">
-            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl">✓</div>
-            <h2 class="text-2xl font-extrabold text-slate-800">Registration Successful!</h2>
-            <p class="text-sm text-slate-600">Your account is auto-approved via Ghana Card validation.</p>
-            
-            <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-left font-mono text-xs space-y-1">
-                <div><strong>Member ID:</strong> {member_id}</div>
-                <div><strong>Email:</strong> {email_clean}</div>
-                <div><strong>Default Password:</strong> <span class="bg-emerald-200 px-2 py-0.5 rounded text-emerald-900 font-bold">{default_password}</span></div>
-            </div>
-
-            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 text-left">
-                <strong>Important:</strong> Present your physical Ghana Card on your first library visit for physical verification and card issuance.
-            </div>
-
-            <a href="/auth/login" class="block w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg shadow text-sm transition">
-                Proceed to Login →
-            </a>
-        </div>
-    </body>
-    </html>
-    """)
+    return RedirectResponse(url="/auth/login?msg=registration_success", status_code=303)
 
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(msg: str = None):
@@ -251,6 +261,8 @@ async def login_page(msg: str = None):
         msg_banner = "<div class='bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs p-3 rounded-lg text-center mb-4 font-semibold'>Password updated successfully! Please log in with your new password.</div>"
     elif msg == "password_reset_success":
         msg_banner = "<div class='bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs p-3 rounded-lg text-center mb-4 font-semibold'>Password reset successful! You can now log in.</div>"
+    elif msg == "registration_success":
+        msg_banner = "<div class='bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs p-3 rounded-lg text-center mb-4 font-semibold'>Registration successful! Please log in with your credentials.</div>"
 
     return HTMLResponse(f"""
     <!DOCTYPE html>
@@ -275,8 +287,8 @@ async def login_page(msg: str = None):
 
             <form method="post" action="/auth/login" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
-                    <input name="email" type="email" placeholder="kwame@gmail.com" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ghana Card / Voter ID / School ID / Email / Phone</label>
+                    <input name="email" type="text" placeholder="GHA-XXXXXXXXX-X, Email, or Phone" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
@@ -290,7 +302,7 @@ async def login_page(msg: str = None):
                 </button>
             </form>
             <div class="text-center pt-2 border-t border-slate-100">
-                <a href="/auth/register" class="text-xs text-emerald-700 hover:underline font-semibold">Register with Ghana Card →</a>
+                <a href="/auth/register" class="text-xs text-emerald-700 hover:underline font-semibold">Don't have account? Register here</a>
             </div>
         </div>
     </body>
@@ -305,15 +317,24 @@ async def login(
     db: Session = Depends(get_db)
 ):
     wants_json = "application/json" in request.headers.get("accept", "").lower()
+    identifier_clean = email.strip()
 
-    user = db.query(User).filter(User.email == email.lower().strip()).first()
+    # Search user across email, ghana_card_number, id_number, phone, or member_id
+    user = db.query(User).filter(
+        (User.email == identifier_clean.lower()) |
+        (User.ghana_card_number == identifier_clean.upper()) |
+        (User.id_number == identifier_clean) |
+        (User.phone == identifier_clean) |
+        (User.member_id == identifier_clean.upper())
+    ).first()
+
     if not user or not verify_password(password, user.hashed_password):
         if wants_json:
-            return JSONResponse(status_code=400, content={"error": "Invalid email or password."})
+            return JSONResponse(status_code=400, content={"error": "Invalid ID, email, phone, or password."})
         return HTMLResponse("""
         <div style='max-width:400px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:20px; border-radius:8px; background:#fef2f2;'>
             <h3 style='color:#dc2626;'>Invalid Credentials</h3>
-            <p>Incorrect email address or password.</p>
+            <p>Incorrect ID, email, phone, or password.</p>
             <a href='/auth/login' style='color:#2563eb;'>← Back to Login</a>
         </div>
         """, status_code=400)

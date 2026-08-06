@@ -28,6 +28,11 @@ class User(Base):
     role = Column(String(30), nullable=False) # sys_admin, hq_admin, librarian, patron
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)
     ghana_card_number = Column(String(50), unique=True, index=True, nullable=True)
+    id_type = Column(String(50), default="ghanacard", nullable=True)
+    id_number = Column(String(50), nullable=True)
+    alt_contact = Column(String(150), nullable=True)
+    phone = Column(String(50), nullable=True)
+    verification_status = Column(String(30), default="verified", nullable=True)
     is_approved = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)

@@ -73,6 +73,11 @@ def on_startup():
         END $$;
         """,
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type VARCHAR(50) DEFAULT 'ghanacard';",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number VARCHAR(50);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS alt_contact VARCHAR(150);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'verified';",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",

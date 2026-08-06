@@ -29,22 +29,29 @@ async def list_users(
         active_btn_color = "bg-rose-600 hover:bg-rose-700" if u.is_active else "bg-emerald-600 hover:bg-emerald-700"
         active_btn_label = "Deactivate" if u.is_active else "Activate"
         status_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>Active</span>" if u.is_active else "<span class='px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded'>DEACTIVATED</span>"
-        verified_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-800 rounded'>✓ Verified</span>" if u.is_physically_verified else "<span class='px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-600 rounded'>Unverified</span>"
+
+        id_disp = u.id_number or u.ghana_card_number or u.alt_contact or '-'
+        id_type_label = (u.id_type or 'ghanacard').upper().replace('_', ' ')
+
+        if u.verification_status == "pending" or not u.is_physically_verified:
+            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded'>Pending Verification</span>"
+        else:
+            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>✓ Verified</span>"
 
         rows += f"""
         <tr class='border-b border-slate-200 hover:bg-slate-50 transition text-xs'>
             <td class='p-3 font-mono font-bold text-emerald-800'>{u.member_id or f'ID-{u.id}'}</td>
             <td class='p-3 font-bold text-slate-800'>{u.full_name}</td>
-            <td class='p-3 font-mono text-slate-600'>{u.email}</td>
-            <td class='p-3 font-mono text-slate-600'>{u.ghana_card_number or '-'}</td>
+            <td class='p-3 font-mono text-slate-600'>{u.email or u.phone or '-'}</td>
+            <td class='p-3 font-mono text-slate-600'><b>{id_type_label}:</b> {id_disp}</td>
             <td class='p-3 uppercase font-bold text-slate-500'>{u.role.replace('_', ' ')}</td>
             <td class='p-3'>{status_badge}</td>
-            <td class='p-3'>{verified_badge}</td>
+            <td class='p-3'>{v_badge}</td>
             <td class='p-3 space-x-1 whitespace-nowrap'>
                 <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
                     <button class='px-2 py-1 text-white font-bold rounded text-[11px] {active_btn_color}'>{active_btn_label}</button>
                 </form>
-                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px]">Verify Card</button></form>' if not u.is_physically_verified else ''}
+                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px]">Verify & Activate</button></form>' if (not u.is_physically_verified or u.verification_status == "pending") else ''}
                 <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline'>
                     <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px]'>Reset Pwd</button>
                 </form>
@@ -66,7 +73,7 @@ async def list_users(
             <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold text-slate-800">User Management - Librarian Control Desk</h2>
-                    <p class="text-xs text-slate-500">Manage enrolled patrons, physical Ghana Card verifications, account activations, & default password resets</p>
+                    <p class="text-xs text-slate-500">Manage enrolled patrons, ID verifications, account activations, & password resets</p>
                 </div>
                 <div class="flex gap-2">
                     <a href="/librarian/users/add" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg shadow transition">
@@ -85,11 +92,11 @@ async def list_users(
                             <tr>
                                 <th class="p-3">Member ID</th>
                                 <th class="p-3">Full Name</th>
-                                <th class="p-3">Email</th>
-                                <th class="p-3">Ghana Card</th>
+                                <th class="p-3">Contact</th>
+                                <th class="p-3">ID Type / Details</th>
                                 <th class="p-3">Role</th>
                                 <th class="p-3">Status</th>
-                                <th class="p-3">Card Verified</th>
+                                <th class="p-3">Verification</th>
                                 <th class="p-3">Actions</th>
                             </tr>
                         </thead>
@@ -253,6 +260,9 @@ async def verify_physical(
         return HTMLResponse("<h3>User not found</h3>", status_code=404)
 
     u.is_physically_verified = True
+    u.verification_status = "verified"
+    u.is_approved = True
+    u.is_active = True
     db.commit()
     return RedirectResponse(url="/librarian/users", status_code=303)
 
