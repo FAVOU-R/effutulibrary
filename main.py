@@ -55,21 +55,41 @@ app.include_router(librarian_router)
 def on_startup():
     from sqlalchemy import text
     Base.metadata.create_all(bind=engine)
-    try:
-        with engine.begin() as conn:
-            for col_stmt in [
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;"
-            ]:
-                try:
-                    conn.execute(text(col_stmt))
-                except Exception:
-                    pass
-    except Exception as e:
-        print(f"[STARTUP WARNING] Schema migration exception: {e}")
+
+    statements = [
+        """
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card_number') THEN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card') THEN
+                    ALTER TABLE users RENAME COLUMN ghana_card TO ghana_card_number;
+                ELSE
+                    ALTER TABLE users ADD COLUMN ghana_card_number VARCHAR(50);
+                END IF;
+            END IF;
+        END $$;
+        """,
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;"
+    ]
+
+    for stmt in statements:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(stmt))
+                conn.commit()
+        except Exception:
+            pass
+
+    if seed_database:
+        try:
+            seed_database()
+        except Exception as e:
+            print(f"[STARTUP WARNING] Seed database exception: {e}")
+
 
     if seed_database:
         try:

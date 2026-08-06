@@ -572,30 +572,45 @@ async def logout():
     return resp
 
 @router.get("/reset-admin")
-def reset_admin_credentials(db: Session = Depends(get_db)):
+def reset_admin_credentials():
     import traceback
     from sqlalchemy import text
+    from app.database import engine, SessionLocal
 
     migration_logs = []
 
-    # 1. Execute Column Schema Alignment on PostgreSQL / SQLite
-    for stmt in [
+    # 1. Execute Schema Migration in Isolated Raw Engine Connections
+    statements = [
+        """
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card_number') THEN
+                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card') THEN
+                    ALTER TABLE users RENAME COLUMN ghana_card TO ghana_card_number;
+                ELSE
+                    ALTER TABLE users ADD COLUMN ghana_card_number VARCHAR(50);
+                END IF;
+            END IF;
+        END $$;
+        """,
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
-        "UPDATE users SET ghana_card_number = ghana_card WHERE ghana_card_number IS NULL AND ghana_card IS NOT NULL;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;"
-    ]:
-        try:
-            db.execute(text(stmt))
-            db.commit()
-            migration_logs.append(f"Executed: {stmt[:40]}...")
-        except Exception as st_err:
-            db.rollback()
-            migration_logs.append(f"Skipped/Handled: {str(st_err)[:60]}")
+    ]
 
-    # 2. Seed / Reset Administrative Credentials
+    for stmt in statements:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(stmt))
+                conn.commit()
+                migration_logs.append(f"Executed: {stmt.strip()[:45]}...")
+        except Exception as st_err:
+            migration_logs.append(f"Handled: {str(st_err)[:60]}")
+
+    # 2. Open Fresh Session and Seed / Reset Admin Credentials
+    db = SessionLocal()
     try:
         creds = [
             ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
@@ -627,11 +642,11 @@ def reset_admin_credentials(db: Session = Depends(get_db)):
                 user.is_approved = True
                 user.must_change_password = False
                 user.is_physically_verified = True
-                if hasattr(user, 'ghana_card_number') and not user.ghana_card_number:
-                    user.ghana_card_number = gha
+                user.ghana_card_number = gha
                 db.commit()
                 result.append(f"Reset {email} / {plain}")
         db.commit()
+        db.close()
         return {
             "status": "success",
             "schema_migration": migration_logs,
@@ -640,11 +655,13 @@ def reset_admin_credentials(db: Session = Depends(get_db)):
         }
     except Exception as e:
         db.rollback()
+        db.close()
         return {
             "status": "error",
             "schema_migration": migration_logs,
             "error": str(e),
             "trace": traceback.format_exc()
         }
+
 
 
