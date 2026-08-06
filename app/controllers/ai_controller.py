@@ -19,7 +19,8 @@ async def chat_boy_grok(request: Request, db: Session = Depends(get_db)):
         body = {}
     
     question = body.get("question") or body.get("prompt") or ""
-    answer = get_ai_response(question, db=db)
+    current_user = get_current_user_optional(request, db)
+    answer = get_ai_response(question, db=db, current_user=current_user)
     return JSONResponse({"answer": answer, "response": answer, "prompt": question})
 
 @router.post("/chatbot")
