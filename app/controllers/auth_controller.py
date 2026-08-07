@@ -84,6 +84,49 @@ def send_email(to_email: str, subject: str, body_html: str):
     threading.Thread(target=send_email_sync, args=(to_email, subject, body_html), daemon=True).start()
     return True
 
+@router.get("/test-email")
+async def test_email_endpoint(to: str):
+    """Diagnostic endpoint to test SMTP email dispatch and view exact error message"""
+    if not to or "@" not in to:
+        return JSONResponse(status_code=400, content={"error": "Invalid target email address. Pass ?to=your_email@gmail.com"})
+    
+    smtp_server = os.getenv("EMAIL_HOST") or os.getenv("MAIL_SERVER") or os.getenv("BREVO_SMTP_SERVER") or os.getenv("SMTP_SERVER") or "smtp-relay.brevo.com"
+    smtp_port = int(os.getenv("EMAIL_PORT") or os.getenv("MAIL_PORT") or os.getenv("BREVO_SMTP_PORT") or 587)
+    smtp_pass = os.getenv("EMAIL_PASS") or os.getenv("MAIL_PASSWORD") or os.getenv("BREVO_SMTP_PASSWORD") or os.getenv("SMTP_PASS") or os.getenv("BREVO_KEY") or ""
+    smtp_user = os.getenv("EMAIL_USER") or os.getenv("MAIL_USERNAME") or os.getenv("BREVO_SMTP_USER") or os.getenv("SMTP_USER") or os.getenv("EMAIL_FROM") or ""
+    sender_email = os.getenv("EMAIL_FROM") or os.getenv("SENDER_EMAIL") or smtp_user or "effutulibrarynetwork@gmail.com"
+
+    if not smtp_pass:
+        return JSONResponse(status_code=400, content={
+            "success": False,
+            "error": "EMAIL_PASS environment variable is missing or empty. Please set EMAIL_PASS in Render Environment Variables."
+        })
+
+    try:
+        msg = MIMEText("<h3>Effutu Library System Test Email</h3><p>Your Brevo/SMTP credentials are working properly!</p>", 'html')
+        msg['Subject'] = "Effutu Library SMTP Test"
+        msg['From'] = f"Effutu Library Network <{sender_email}>"
+        msg['To'] = to
+
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=12)
+        server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+        return {"success": True, "message": f"Test email sent successfully to {to} via {smtp_server}:{smtp_port}"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={
+            "success": False,
+            "error": str(e),
+            "diagnostics": {
+                "smtp_server": smtp_server,
+                "smtp_port": smtp_port,
+                "smtp_user": smtp_user,
+                "sender_email": sender_email,
+                "has_pass": bool(smtp_pass)
+            }
+        })
+
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(db: Session = Depends(get_db)):
     from app.models import Branch

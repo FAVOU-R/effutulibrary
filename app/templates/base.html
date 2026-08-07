@@ -42,25 +42,25 @@
                             <span id="notif-badge" class="hidden absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">0</span>
                         </a>
 
-                        <div class="hidden sm:flex items-center space-x-3 bg-slate-800/80 border border-slate-700/60 rounded-xl py-1.5 px-3">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-800 text-emerald-200 font-bold text-xs flex items-center justify-center uppercase">
-                                {{ current_user.full_name[:2] }}
+                        <div class="flex items-center gap-3 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-amber-300 font-extrabold text-xs shadow-inner">
+                                {{ current_user.full_name[0] }}
                             </div>
-                            <div class="text-left">
-                                <div class="font-bold text-xs text-white leading-tight">{{ current_user.full_name }}</div>
-                                <span class="text-[10px] text-emerald-400 font-mono font-semibold uppercase">
+                            <div class="hidden sm:block text-left">
+                                <div class="font-extrabold text-xs text-white leading-tight">{{ current_user.full_name }}</div>
+                                <span class="text-[11px] text-emerald-300 font-mono font-bold uppercase tracking-wide">
                                     {{ current_user.role.replace('_', ' ') }}
                                 </span>
                             </div>
                         </div>
 
-                        <a href="/auth/logout" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+                        <a href="/auth/logout" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-500/30 text-xs font-extrabold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>Logout</span>
                         </a>
                     {% else %}
-                        <a href="/login" class="text-xs font-bold text-slate-300 hover:text-white px-3 py-2">Login</a>
-                        <a href="/register" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-bold px-4 py-2 rounded-xl text-white shadow-md shadow-emerald-900/30 transition">Register</a>
+                        <a href="/login" class="text-xs font-extrabold text-slate-200 hover:text-white px-3.5 py-2 transition">Login</a>
+                        <a href="/register" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold px-4 py-2.5 rounded-xl text-white shadow-md shadow-emerald-900/30 transition">Register</a>
                     {% endif %}
                 </div>
             </div>
@@ -76,25 +76,25 @@
             
             <!-- Navigation Links -->
             <div class="space-y-1">
-                <div class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider px-3 mb-2">Main Navigation</div>
+                <div class="text-xs font-black text-slate-500 uppercase tracking-widest px-3 mb-2">Main Navigation</div>
                 
-                <a href="/dashboard/{{ current_user.role }}" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-chart-pie text-emerald-600 text-sm w-5 text-center"></i>
+                <a href="/dashboard/{{ current_user.role }}" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-chart-pie text-emerald-600 text-base w-5 text-center"></i>
                     <span>Dashboard</span>
                 </a>
 
-                <a href="/catalog" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-book-bookmark text-teal-600 text-sm w-5 text-center"></i>
+                <a href="/catalog" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-book-bookmark text-teal-600 text-base w-5 text-center"></i>
                     <span>Book Catalog</span>
                 </a>
 
-                <a href="/leaderboard" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-trophy text-amber-500 text-sm w-5 text-center"></i>
+                <a href="/leaderboard" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-trophy text-amber-500 text-base w-5 text-center"></i>
                     <span>Reading Leaderboard</span>
                 </a>
 
-                <a href="/scan-qr" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-qrcode text-cyan-600 text-sm w-5 text-center"></i>
+                <a href="/scan-qr" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-qrcode text-cyan-600 text-base w-5 text-center"></i>
                     <span>QR Quick Borrow</span>
                 </a>
             </div>
@@ -102,20 +102,20 @@
             {% if current_user.role in ['sys_admin', 'hq_admin', 'librarian'] %}
             <!-- Management Desk -->
             <div class="space-y-1 pt-3 border-t border-slate-100">
-                <div class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider px-3 mb-2">Librarian Desk</div>
+                <div class="text-xs font-black text-slate-500 uppercase tracking-widest px-3 mb-2">Librarian Desk</div>
                 
-                <a href="/librarian/users" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-users-gear text-blue-600 text-sm w-5 text-center"></i>
+                <a href="/librarian/users" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-users-gear text-blue-600 text-base w-5 text-center"></i>
                     <span>Manage Users</span>
                 </a>
                 
-                <a href="/librarian/reservations" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-bookmark text-indigo-600 text-sm w-5 text-center"></i>
+                <a href="/librarian/reservations" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-bookmark text-indigo-600 text-base w-5 text-center"></i>
                     <span>Book Reservations</span>
                 </a>
                 
-                <a href="/admin/reports" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl font-bold text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-800 transition">
-                    <i class="fa-solid fa-chart-column text-purple-600 text-sm w-5 text-center"></i>
+                <a href="/admin/reports" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
+                    <i class="fa-solid fa-chart-column text-purple-600 text-base w-5 text-center"></i>
                     <span>GLA Reports</span>
                 </a>
             </div>
