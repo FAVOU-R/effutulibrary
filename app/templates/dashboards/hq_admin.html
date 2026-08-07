@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}HQ Admin Dashboard - Effutu Central Library{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header Banner -->
+    <div class="bg-effutu-green text-white p-6 rounded-lg shadow-md flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-extrabold flex items-center gap-2">
+                <i class="fa-solid fa-landmark text-amber-300"></i>
+                Effutu Central Library (HQ Admin Oversight)
+            </h1>
+            <p class="text-xs text-emerald-200 mt-1">Full Branch Management for Central Library + Read-Only Oversight of Sub-Libraries</p>
+        </div>
+        <div class="bg-amber-800 text-amber-100 px-3 py-1.5 rounded font-mono text-xs font-bold uppercase border border-amber-600">
+            HQ Central Oversight
+        </div>
+    </div>
+
+    <!-- HQ Controls & Sub-Branches Overview Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left 2 Cols: Central Library Operations -->
+        <div class="lg:col-span-2 space-y-6">
+            
+            <!-- Quick Actions -->
+            <div class="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-3">
+                <a href="/catalog/add" class="btn-effutu text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-plus-circle"></i> Add Book to HQ Catalog
+                </a>
+                <a href="/scan-qr" class="btn-effutu-outline text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-qrcode"></i> Instant QR Scanner
+                </a>
+            </div>
+
+            <!-- Active Loans Table -->
+            <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-emerald-600"></i>
+                    HQ Central Active Loans & Returns
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600 border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                                <th class="p-3">Book Title</th>
+                                <th class="p-3">Patron Name</th>
+                                <th class="p-3">Due Date</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for t in active_loans %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-semibold text-slate-800">{{ t.book_title }}</td>
+                                <td class="p-3">{{ t.patron_name }}</td>
+                                <td class="p-3 font-mono">{{ t.due_date }}</td>
+                                <td class="p-3">
+                                    {% if t.is_overdue %}
+                                        <span class="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded">Overdue (GHS {{ "%.2f"|format(t.fine_amount_ghs) }})</span>
+                                    {% else %}
+                                        <span class="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td class="p-3 text-right">
+                                    <button onclick="returnBook({{ t.id }})" class="btn-effutu text-[11px] py-1 px-2">Return</button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="p-4 text-center text-slate-400">No active loans in HQ Central Library</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Col: Read-Only Sub-Libraries Oversight -->
+        <div class="space-y-4">
+            <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
+                <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                    <i class="fa-solid fa-eye text-emerald-600"></i>
+                    Sub-Libraries Oversight (Read-Only)
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">HQ Admin oversight across all municipal sub-branches. Note: Modification requires branch librarian access.</p>
+                
+                <div class="space-y-3">
+                    {% for b in sub_branches %}
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded text-xs flex justify-between items-center">
+                        <div>
+                            <div class="font-bold text-slate-800">{{ b.name }}</div>
+                            <div class="text-[11px] text-slate-500">{{ b.location }}</div>
+                        </div>
+                        <div>
+                            {% if b.status == 'active' %}
+                                <span class="badge-active">ACTIVE</span>
+                            {% else %}
+                                <span class="badge-target">TARGET</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function returnBook(transId) {
+    if (!confirm("Confirm book return? Fines will be calculated automatically.")) return;
+    const res = await fetch(`/api/issue/return/${transId}`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message + (data.fine_amount_ghs > 0 ? ` (Fine Due: GHS ${data.fine_amount_ghs})` : ""));
+    window.location.reload();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Login - Effutu Municipal Library System{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl p-8 shadow-xl mt-6 space-y-6">
+    <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-700 text-white rounded-2xl shadow-lg shadow-emerald-700/30 mb-1">
+            <i class="fa-solid fa-book-open-reader text-2xl"></i>
+        </div>
+        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Effutu Library Sign In</h2>
+        <p class="text-xs text-slate-500 font-medium">Access your municipal library portal & resources</p>
+    </div>
+
+    <div id="error-alert" class="hidden p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold"></div>
+
+    <form id="login-form" method="post" action="/auth/login" class="space-y-4">
+        <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Account Identifier
+            </label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-user text-sm"></i>
+                </div>
+                <input type="text" name="email" required placeholder="Email, Phone, Ghana Card, or Member ID" class="w-full pl-10 pr-3.5 py-3 text-sm bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none transition">
+            </div>
+        </div>
+
+        <div>
+            <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Password
+                </label>
+                <a href="/auth/forgot-password" class="text-xs text-emerald-700 hover:text-emerald-800 font-semibold transition">
+                    Forgot Password?
+                </a>
+            </div>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-lock text-sm"></i>
+                </div>
+                <input id="tmpl-password-input" type="password" name="password" required placeholder="••••••••" class="w-full pl-10 pr-10 py-3 text-sm bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 focus:outline-none transition">
+                <button type="button" onclick="toggleTmplPassword()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+                    <i id="tmpl-pass-icon" class="fa-solid fa-eye text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-700 to-emerald-800 hover:from-emerald-800 hover:to-emerald-900 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-700/25 transition duration-200 flex items-center justify-center gap-2">
+            <span>Sign In to Account</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+        </button>
+    </form>
+
+    <div class="pt-4 border-t border-slate-200/80 text-center">
+        <p class="text-xs text-slate-500 font-medium">
+            Don't have an account? 
+            <a href="/register" class="text-emerald-700 hover:text-emerald-800 font-bold hover:underline ml-1">Register Here</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleTmplPassword() {
+    const input = document.getElementById('tmpl-password-input');
+    const icon = document.getElementById('tmpl-pass-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const errDiv = document.getElementById('error-alert');
+    errDiv.classList.add('hidden');
+
+    const formData = new FormData(this);
+    try {
+        const res = await fetch('/auth/login', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            body: formData
+        });
+
+        if (res.redirected) {
+            window.location.href = res.url;
+            return;
+        }
+
+        let data = {};
+        try {
+            data = await res.json();
+        } catch (jsonErr) {}
+
+        if (res.ok) {
+            window.location.href = data.redirect_url || '/dashboard/patron';
+        } else {
+            errDiv.textContent = data.error || data.detail || "Invalid email or password. Please check your credentials.";
+            errDiv.classList.remove('hidden');
+        }
+    } catch (err) {
+        // If fetch fails completely, fall back to traditional HTML form submit
+        this.submit();
+    }
+});
+</script>
+{% endblock %}
