@@ -108,7 +108,7 @@ async def librarian_reservations(
             <td class='p-3 space-x-1 whitespace-nowrap'>
                 {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="ready"><button class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px]">Mark Ready</button></form>' if r.status == 'reserved' else ''}
                 {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="collected"><button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px]">Mark Collected</button></form>' if r.status == 'ready' else ''}
-                {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="cancelled"><button class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px]">Cancel</button></form>' if r.status in ['reserved', 'ready'] else ''}
+                {'<button onclick="rejectRes(' + str(r.id) + ')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px]">Reject / Cancel</button>' if r.status in ['reserved', 'ready'] else ''}
             </td>
         </tr>
         """
@@ -154,14 +154,99 @@ async def librarian_reservations(
                 </div>
             </div>
         </div>
+
+        <script>
+        function rejectRes(id) {{
+            const reason = prompt("Enter rejection reason (e.g. Unavailable at branch, Damaged copy, Exceeded hold limit):", "Unavailable at branch");
+            if (reason !== null && reason.trim() !== "") {{
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/api/reservations/' + id + '/reject';
+                
+                const inputReason = document.createElement('input');
+                inputReason.type = 'hidden';
+                inputReason.name = 'reason';
+                inputReason.value = reason;
+                form.appendChild(inputReason);
+
+                const inputRejectReason = document.createElement('input');
+                inputRejectReason.type = 'hidden';
+                inputRejectReason.name = 'reject_reason';
+                inputRejectReason.value = reason;
+                form.appendChild(inputRejectReason);
+
+                document.body.appendChild(form);
+                form.submit();
+            }}
+        }}
+        </script>
     </body>
     </html>
     """)
 
+@router.post("/api/reservations/{res_id}/reject")
+@router.post("/librarian/reservations/{res_id}/reject")
+async def reject_reservation(
+    res_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian_or_admin)
+):
+    r = db.query(Reservation).filter(Reservation.id == res_id).first()
+    if not r:
+        if "api" in str(request.url):
+            return JSONResponse(status_code=404, content={"error": "Reservation not found"})
+        return HTMLResponse("<h3>Reservation not found</h3>", status_code=404)
+
+    reason = "Unavailable at branch"
+    try:
+        data = await request.json()
+        reason = data.get("reason") or data.get("reject_reason") or reason
+    except Exception:
+        try:
+            form = await request.form()
+            reason = form.get("reason") or form.get("reject_reason") or reason
+        except Exception:
+            pass
+
+    print(f"Rejecting reservation {res_id} with reason: {reason}")
+
+    r.status = "rejected"
+    r.reject_reason = reason
+    db.commit()
+
+    try:
+        book_title = r.book.title if r.book else "Reserved Book"
+        notif = Notification(
+            user_id=r.user_id,
+            title="Reservation Declined ❌",
+            message=f"Your reservation for '{book_title}' was declined. Reason: {reason}",
+            type="warning"
+        )
+        db.add(notif)
+        db.commit()
+    except Exception as ex:
+        print(f"[REJECTION NOTIF WARNING] {ex}")
+
+    try:
+        if r.user and r.user.email:
+            send_email(
+                r.user.email,
+                f"Reservation Declined: '{r.book.title if r.book else 'Book'}'",
+                f"<p>Hi {r.user.full_name},</p><p>Your reservation for <b>'{r.book.title if r.book else 'Book'}'</b> was declined.</p><p><b>Reason:</b> {reason}</p><p>Effutu Library Network</p>"
+            )
+    except Exception as ex:
+        print(f"[REJECTION EMAIL WARNING] {ex}")
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": "Reservation rejected successfully", "reason": reason})
+
+    return RedirectResponse(url="/librarian/reservations", status_code=303)
+
 @router.post("/librarian/reservations/{res_id}/status")
 async def update_reservation_status(
     res_id: int,
-    status: str = Form(...),
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian_or_admin)
 ):
@@ -169,34 +254,78 @@ async def update_reservation_status(
     if not r:
         return HTMLResponse("<h3>Reservation not found</h3>", status_code=404)
 
-    r.status = status.strip()
+    status = "cancelled"
+    reason = None
+    try:
+        form = await request.form()
+        status = form.get("status", "cancelled").strip()
+        reason = form.get("reason") or form.get("reject_reason")
+    except Exception:
+        try:
+            data = await request.json()
+            status = data.get("status", "cancelled").strip()
+            reason = data.get("reason") or data.get("reject_reason")
+        except Exception:
+            pass
+
+    r.status = status
+    if reason:
+        r.reject_reason = reason
     db.commit()
 
     book_title = r.book.title if r.book else "Reserved Book"
     branch_name = r.user.branch.name if (r.user and r.user.branch) else "Effutu Municipal Library"
 
     if status == "ready":
-        # Dispatch notification & email
-        notif = Notification(
-            user_id=r.user_id,
-            title="Book Ready for Pick Up! 📦",
-            message=f"Hi {r.user.full_name}, reserved book '{book_title}' is ready at {branch_name}. Collect within 2 days.",
-            type="success"
-        )
-        db.add(notif)
-        db.commit()
-
-        if r.user.email:
-            send_email(
-                r.user.email,
-                f"Reserved Book Ready: '{book_title}'",
-                f"<p>Hi {r.user.full_name}, reserved book <b>'{book_title}'</b> is ready at {branch_name}. Collect within 2 days.</p><p>Effutu Library Network</p>"
+        try:
+            notif = Notification(
+                user_id=r.user_id,
+                title="Book Ready for Pick Up! 📦",
+                message=f"Hi {r.user.full_name}, reserved book '{book_title}' is ready at {branch_name}. Collect within 2 days.",
+                type="success"
             )
+            db.add(notif)
+            db.commit()
+
+            if r.user and r.user.email:
+                send_email(
+                    r.user.email,
+                    f"Reserved Book Ready: '{book_title}'",
+                    f"<p>Hi {r.user.full_name}, reserved book <b>'{book_title}'</b> is ready at {branch_name}. Collect within 2 days.</p><p>Effutu Library Network</p>"
+                )
+        except Exception as ex:
+            print(f"[STATUS NOTIF WARNING] {ex}")
+
+    elif status in ["cancelled", "rejected"]:
+        print(f"Rejecting reservation {res_id} with reason: {reason}")
+        try:
+            notif = Notification(
+                user_id=r.user_id,
+                title="Reservation Declined ❌",
+                message=f"Your reservation for '{book_title}' was declined. Reason: {reason or 'Unavailable at branch'}",
+                type="warning"
+            )
+            db.add(notif)
+            db.commit()
+
+            if r.user and r.user.email:
+                send_email(
+                    r.user.email,
+                    f"Reservation Declined: '{book_title}'",
+                    f"<p>Hi {r.user.full_name},</p><p>Your reservation for <b>'{book_title}'</b> was declined.</p><p><b>Reason:</b> {reason or 'Unavailable'}</p><p>Effutu Library Network</p>"
+                )
+        except Exception as ex:
+            print(f"[REJECT EMAIL WARNING] {ex}")
 
     elif status == "collected":
-        # Award +5 points for collecting reservation
-        point = UserPoint(user_id=r.user_id, points=5, reason="Reserved Book Collection Bonus")
-        db.add(point)
-        db.commit()
+        try:
+            point = UserPoint(user_id=r.user_id, points=5, reason="Reserved Book Collection Bonus")
+            db.add(point)
+            db.commit()
+        except Exception as ex:
+            print(f"[POINT WARNING] {ex}")
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": f"Reservation updated to {status}"})
 
     return RedirectResponse(url="/librarian/reservations", status_code=303)

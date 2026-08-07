@@ -122,7 +122,8 @@ class Reservation(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
-    status = Column(String(30), default="reserved") # reserved, ready, collected, cancelled, expired
+    status = Column(String(30), default="reserved") # reserved, ready, collected, cancelled, rejected, expired
+    reject_reason = Column(Text, nullable=True)
     reserved_at = Column(DateTime, default=datetime.datetime.utcnow)
     expires_at = Column(DateTime, nullable=True)
 

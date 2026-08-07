@@ -1,22 +1,34 @@
-/* Effutu Municipal Library System - Crisp Solid Green Design Theme */
+/* Effutu Municipal Library System - Crisp Modern Premium Design Theme */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
-  --primary-green: #15803d;     /* Solid Forest Green */
-  --primary-dark: #14532d;      /* Solid Deep Dark Green */
-  --primary-light: #22c55e;     /* Vibrant Solid Green */
-  --bg-green: #f4fdf6;          /* Crisp Light Green Tint */
+  --primary-green: #047857;     /* Emerald 700 */
+  --primary-dark: #064e3b;      /* Emerald 900 */
+  --primary-light: #10b981;     /* Emerald 500 */
+  --bg-green: #ecfdf5;          /* Emerald 50 Tint */
   --card-bg: #ffffff;           /* Clean Solid White */
-  --accent-gold: #eab308;       /* Ghanaian Star Gold Accent */
-  --text-dark: #0f172a;         /* Deep Slate Dark Text */
-  --text-muted: #475569;        /* Muted Gray Text */
-  --border-color: #cbd5e1;      /* Sharp Border Lines */
-  --border-green: #86efac;      /* Crisp Green Border */
+  --accent-gold: #f59e0b;       /* Gold Accent */
+  --text-dark: #0f172a;         /* Slate 900 */
+  --text-muted: #64748b;        /* Slate 500 */
+  --border-color: #e2e8f0;      /* Slate 200 */
+  --border-green: #a7f3d0;      /* Emerald 200 */
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #f8fafc;
   color: var(--text-dark);
+  letter-spacing: -0.011em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .bg-effutu-green {
@@ -26,7 +38,13 @@ body {
 .bg-effutu-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.bg-effutu-card:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
 }
 
 .border-effutu-green {
@@ -40,30 +58,34 @@ body {
 .btn-effutu {
   background-color: var(--primary-green);
   color: #ffffff;
-  font-weight: 600;
-  padding: 0.5rem 1.25rem;
-  border-radius: 6px;
+  font-weight: 700;
+  padding: 0.6rem 1.35rem;
+  border-radius: 8px;
   border: none;
-  transition: background-color 0.15s ease-in-out;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
 }
 
 .btn-effutu:hover {
   background-color: var(--primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px -1px rgba(4, 120, 87, 0.25);
 }
 
 .btn-effutu-outline {
   background-color: transparent;
   color: var(--primary-green);
   border: 2px solid var(--primary-green);
-  font-weight: 600;
-  padding: 0.45rem 1.15rem;
-  border-radius: 6px;
-  transition: all 0.15s ease-in-out;
+  font-weight: 700;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
 }
 
 .btn-effutu-outline:hover {
   background-color: var(--primary-green);
   color: #ffffff;
+  transform: translateY(-1px);
 }
 
 /* Chatbot Floating Widget */
@@ -75,28 +97,26 @@ body {
 }
 
 #chatbot-window {
-  width: 360px;
-  height: 480px;
+  width: 380px;
+  height: 520px;
   background: #ffffff;
-  border: 2px solid var(--primary-green);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 #chatbot-window.hidden {
   display: none !important;
 }
 
-
 .chat-header {
   background-color: var(--primary-dark);
   color: #ffffff;
-  padding: 12px 16px;
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-  font-weight: bold;
+  padding: 14px 18px;
+  font-weight: 800;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -104,24 +124,27 @@ body {
 
 .chat-body {
   flex: 1;
-  padding: 12px;
+  padding: 16px;
   overflow-y: auto;
   background-color: #f8fafc;
 }
 
 .chat-msg {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   max-width: 85%;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  line-height: 1.4;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03);
 }
 
 .chat-msg.bot {
-  background-color: #e2e8f0;
+  background-color: #ffffff;
   color: #0f172a;
-  border-left: 3px solid var(--primary-green);
+  border-left: 4px solid var(--primary-green);
+  border: 1px solid #e2e8f0;
+  border-left-width: 4px;
   align-self: flex-start;
 }
 
@@ -129,24 +152,25 @@ body {
   background-color: var(--primary-green);
   color: #ffffff;
   margin-left: auto;
+  border-bottom-right-radius: 2px;
 }
 
 .badge-active {
   background-color: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
+  color: #15803d;
+  border: 1px solid #a7f3d0;
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 9999px;
 }
 
 .badge-target {
-  background-color: #fef9c3;
-  color: #854d0e;
-  border: 1px solid #fde047;
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
   font-size: 0.75rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 9999px;
 }

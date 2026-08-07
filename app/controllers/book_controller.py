@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Book, BookCopy, User
 from app.controllers.auth_controller import get_current_user
-from app.services.qr_service import generate_qr_token
+from app.services.qr_service import generate_qr_token, generate_qr_code_base64
 
 router = APIRouter(prefix="/api/books", tags=["Catalog Management"])
 
@@ -15,11 +15,66 @@ def get_books(db: Session = Depends(get_db)):
     for b in books:
         avail = db.query(BookCopy).filter(BookCopy.book_id == b.id, BookCopy.status == "available").count()
         tot = db.query(BookCopy).filter(BookCopy.book_id == b.id).count()
+        tok = f"EFF-LIB-B{b.id}-MAIN"
         res.append({
             "id": b.id, "title": b.title, "author": b.author, "isbn": b.isbn,
-            "category": b.category, "available_copies": avail, "total_copies": tot
+            "category": b.category, "available_copies": avail, "total_copies": tot,
+            "token": tok, "qr_token": tok, "qr": generate_qr_code_base64(tok)
         })
     return res
+
+@router.get("/{book_id}")
+def get_book(book_id: int, db: Session = Depends(get_db)):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    copy = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").first()
+    if not copy:
+        copy = db.query(BookCopy).filter(BookCopy.book_id == book.id).first()
+
+    qr_tok = copy.qr_token if copy else f"EFF-LIB-B{book.id}-MAIN"
+    qr_base64 = generate_qr_code_base64(qr_tok)
+
+    avail = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").count()
+    tot = db.query(BookCopy).filter(BookCopy.book_id == book.id).count()
+
+    return {
+        "id": book.id,
+        "title": book.title,
+        "author": book.author,
+        "isbn": book.isbn,
+        "category": book.category,
+        "available_copies": avail,
+        "total_copies": tot,
+        "token": qr_tok,
+        "qr_token": qr_tok,
+        "qr": qr_base64,
+        "qr_code": qr_base64
+    }
+
+@router.get("/{book_id}/token")
+@router.get("/{book_id}/qr")
+def get_book_qr(book_id: int, db: Session = Depends(get_db)):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    copy = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").first()
+    if not copy:
+        copy = db.query(BookCopy).filter(BookCopy.book_id == book.id).first()
+
+    qr_tok = copy.qr_token if copy else f"EFF-LIB-B{book.id}-MAIN"
+    qr_base64 = generate_qr_code_base64(qr_tok)
+
+    return {
+        "book_id": book.id,
+        "title": book.title,
+        "token": qr_tok,
+        "qr_token": qr_tok,
+        "qr": qr_base64,
+        "qr_code": qr_base64
+    }
 
 @router.post("")
 def add_book(

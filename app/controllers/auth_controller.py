@@ -46,23 +46,25 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-def send_email(to_email: str, subject: str, body_html: str) -> bool:
+def send_email_sync(to_email: str, subject: str, body_html: str):
+    if not to_email or "@" not in to_email:
+        return False
     try:
-        smtp_server = settings.MAIL_SERVER or settings.BREVO_SMTP_SERVER
-        smtp_user = settings.MAIL_USERNAME or settings.BREVO_SMTP_USER
-        smtp_pass = settings.MAIL_PASSWORD or settings.BREVO_SMTP_PASSWORD
-        smtp_port = settings.MAIL_PORT or settings.BREVO_SMTP_PORT
+        smtp_server = getattr(settings, 'MAIL_SERVER', None) or getattr(settings, 'BREVO_SMTP_SERVER', 'smtp-relay.brevo.com')
+        smtp_user = getattr(settings, 'MAIL_USERNAME', None) or getattr(settings, 'BREVO_SMTP_USER', '')
+        smtp_pass = getattr(settings, 'MAIL_PASSWORD', None) or getattr(settings, 'BREVO_SMTP_PASSWORD', '')
+        smtp_port = getattr(settings, 'MAIL_PORT', None) or getattr(settings, 'BREVO_SMTP_PORT', 587)
 
-        if not smtp_server or not smtp_user:
+        if not smtp_server or not smtp_user or not smtp_pass:
             print(f"[DEMO EMAIL] To: {to_email} | Subject: {subject}")
             return False
 
         msg = MIMEText(body_html, 'html')
         msg['Subject'] = subject
-        msg['From'] = settings.SENDER_EMAIL or smtp_user
+        msg['From'] = getattr(settings, 'SENDER_EMAIL', None) or smtp_user
         msg['To'] = to_email
 
-        server = smtplib.SMTP(smtp_server, int(smtp_port))
+        server = smtplib.SMTP(smtp_server, int(smtp_port), timeout=10)
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
@@ -71,6 +73,11 @@ def send_email(to_email: str, subject: str, body_html: str) -> bool:
     except Exception as e:
         print(f"[EMAIL DISPATCH ERROR] {e}")
         return False
+
+def send_email(to_email: str, subject: str, body_html: str):
+    import threading
+    threading.Thread(target=send_email_sync, args=(to_email, subject, body_html), daemon=True).start()
+    return True
 
 @router.get("/register", response_class=HTMLResponse)
 async def register_page(db: Session = Depends(get_db)):
