@@ -5,26 +5,29 @@
 <div class="space-y-6">
 
     <!-- Header Banner -->
-    <div class="bg-effutu-green text-white p-6 rounded-lg shadow-md flex justify-between items-center">
-        <div>
-            <h1 class="text-2xl font-extrabold flex items-center gap-2">
-                <i class="fa-solid fa-book-bookmark text-emerald-300"></i>
-                Branch Librarian Desk: {{ branch.name }}
+    <div class="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-900 text-white p-6 rounded-2xl shadow-xl border border-emerald-700/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10">
+            <h1 class="text-2xl font-extrabold flex items-center gap-3 tracking-tight">
+                <div class="w-10 h-10 rounded-xl bg-emerald-800/80 border border-emerald-600/50 flex items-center justify-center shadow">
+                    <i class="fa-solid fa-book-bookmark text-amber-300 text-lg"></i>
+                </div>
+                <span>Branch Librarian Desk: {{ branch.name }}</span>
             </h1>
-            <p class="text-xs text-emerald-200 mt-1">Branch Scoped Management • Location: {{ branch.location }}</p>
+            <p class="text-xs text-emerald-200/80 mt-1 font-medium">Branch Scoped Management • Location: {{ branch.location }}</p>
         </div>
-        <div class="bg-emerald-900 text-emerald-200 px-3 py-1.5 rounded font-mono text-xs font-bold uppercase border border-emerald-700">
-            Branch: {{ branch.code }}
+        <div class="bg-amber-500/10 text-amber-300 px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold uppercase border border-amber-500/30 shrink-0 relative z-10">
+            Branch Code: {{ branch.code }}
         </div>
     </div>
 
     <!-- Quick Action Bar -->
-    <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-wrap gap-3">
-        <a href="/catalog/add" class="btn-effutu text-xs flex items-center gap-1">
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap items-center gap-3">
+        <a href="/catalog/add" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-md shadow-emerald-900/20 transition flex items-center gap-2">
             <i class="fa-solid fa-plus-circle"></i> Add Book (ISBN Scan)
         </a>
-        <a href="/scan-qr" class="btn-effutu-outline text-xs flex items-center gap-1">
-            <i class="fa-solid fa-qrcode"></i> QR Instant Borrow Desk
+        <a href="/scan-qr" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-2">
+            <i class="fa-solid fa-qrcode text-emerald-600"></i> QR Instant Borrow Desk
         </a>
     </div>
 
@@ -32,68 +35,80 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         <!-- Pending Patron Registrations -->
-        <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-user-clock text-amber-500"></i>
-                Pending Patron Approvals ({{ pending_users|length }})
-            </h3>
-            <p class="text-xs text-slate-500 mb-4">Approving a patron generates a Member ID and triggers a Brevo notification email with login credentials.</p>
+        <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
+            <div>
+                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-user-clock text-amber-500 text-sm"></i>
+                    Pending Patron Approvals ({{ pending_users|length }})
+                </h3>
+                <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Approving a patron generates a Member ID and triggers a Brevo notification email with login credentials.</p>
+            </div>
 
             <div class="space-y-3">
                 {% for u in pending_users %}
-                <div class="p-3 bg-slate-50 border border-slate-200 rounded flex justify-between items-center text-xs">
-                    <div>
-                        <div class="font-bold text-slate-800">{{ u.full_name }}</div>
-                        <div class="text-slate-500 font-mono">
-                            ID: {{ u.id_type|upper if u.id_type else 'GHANA CARD' }} ({{ u.id_number or u.alt_contact or u.ghana_card_number or 'No Card Provided' }})
+                <div class="p-4 bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
+                    <div class="space-y-0.5">
+                        <div class="font-bold text-slate-900 text-xs">{{ u.full_name }}</div>
+                        <div class="text-[11px] text-slate-600 font-mono">
+                            {{ u.id_type|upper if u.id_type else 'GHANA CARD' }}: {{ u.id_number or u.alt_contact or u.ghana_card_number or 'No Card Provided' }}
                         </div>
-                        <div class="text-slate-400 text-[11px]">Phone: {{ u.phone or u.email }}</div>
+                        <div class="text-slate-400 text-[11px] font-medium">Contact: {{ u.phone or u.email }}</div>
                     </div>
-                    <button onclick="approveUser({{ u.id }})" class="btn-effutu text-xs py-1 px-3">
-                        Verify & Approve Account
+                    <button onclick="approveUser({{ u.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl shadow-sm transition shrink-0">
+                        Verify & Approve
                     </button>
                 </div>
                 {% else %}
-                <div class="text-center py-6 text-slate-400 text-xs">No pending patron registrations for this branch</div>
+                <div class="text-center py-8 text-slate-400 text-xs font-medium">
+                    <i class="fa-solid fa-circle-check text-2xl mb-2 text-slate-300 block"></i>
+                    No pending patron registrations for this branch
+                </div>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Branch Active & Overdue Loans -->
-        <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
-            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
-                <i class="fa-solid fa-file-invoice text-emerald-600"></i>
-                Branch Loans & Overdue Desk
-            </h3>
+        <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
+                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice text-emerald-600 text-sm"></i>
+                    Branch Loans & Overdue Desk
+                </h3>
+            </div>
 
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 border-collapse">
                     <thead>
-                        <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
-                            <th class="p-2">Book Title</th>
-                            <th class="p-2">Borrower</th>
-                            <th class="p-2">Due Date</th>
-                            <th class="p-2 text-right">Action</th>
+                        <tr class="bg-slate-100/80 text-slate-500 font-extrabold uppercase text-[11px] border-b border-slate-200">
+                            <th class="p-3.5">Book Title</th>
+                            <th class="p-3.5">Borrower</th>
+                            <th class="p-3.5">Due Date</th>
+                            <th class="p-3.5 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         {% for t in active_loans %}
-                        <tr class="hover:bg-slate-50">
-                            <td class="p-2 font-semibold text-slate-800">{{ t.book_title }}</td>
-                            <td class="p-2">{{ t.patron_name }}</td>
-                            <td class="p-2 font-mono">
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5 font-bold text-slate-900">{{ t.book_title }}</td>
+                            <td class="p-3.5 font-medium text-slate-700">{{ t.patron_name }}</td>
+                            <td class="p-3.5 font-mono">
                                 {% if t.is_overdue %}
-                                    <span class="text-rose-600 font-bold">{{ t.due_date }} (Overdue: GHS {{ "%.2f"|format(t.fine_amount_ghs) }})</span>
+                                    <span class="bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Overdue: GHS {{ "%.2f"|format(t.fine_amount_ghs) }}</span>
                                 {% else %}
-                                    <span>{{ t.due_date }}</span>
+                                    <span class="text-slate-700 font-medium">{{ t.due_date }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-2 text-right">
-                                <button onclick="returnBook({{ t.id }})" class="btn-effutu text-[11px] py-1 px-2">Return</button>
+                            <td class="p-3.5 text-right">
+                                <button onclick="returnBook({{ t.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">Return</button>
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="4" class="p-4 text-center text-slate-400">No active loans</td></tr>
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-slate-400 font-medium">
+                                <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300 block"></i>
+                                No active loans currently recorded at this branch
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

@@ -29,15 +29,24 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
     
-    copy = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").first()
-    if not copy:
-        copy = db.query(BookCopy).filter(BookCopy.book_id == book.id).first()
+    copies = db.query(BookCopy).filter(BookCopy.book_id == book.id).all()
+    copies_list = []
+    for c in copies:
+        copies_list.append({
+            "id": c.id,
+            "copy_code": c.copy_code,
+            "branch_name": c.branch.name if c.branch else "HQ Central Library",
+            "status": c.status,
+            "qr_token": c.qr_token,
+            "qr_base64": generate_qr_code_base64(c.qr_token)
+        })
 
-    qr_tok = copy.qr_token if copy else f"EFF-LIB-B{book.id}-MAIN"
+    first_copy = next((c for c in copies if c.status == "available"), copies[0] if copies else None)
+    qr_tok = first_copy.qr_token if first_copy else f"EFF-LIB-B{book.id}-MAIN"
     qr_base64 = generate_qr_code_base64(qr_tok)
 
-    avail = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").count()
-    tot = db.query(BookCopy).filter(BookCopy.book_id == book.id).count()
+    avail = sum(1 for c in copies if c.status == "available")
+    tot = len(copies)
 
     return {
         "id": book.id,
@@ -50,7 +59,8 @@ def get_book(book_id: int, db: Session = Depends(get_db)):
         "token": qr_tok,
         "qr_token": qr_tok,
         "qr": qr_base64,
-        "qr_code": qr_base64
+        "qr_code": qr_base64,
+        "copies": copies_list
     }
 
 @router.get("/{book_id}/token")
