@@ -50,28 +50,33 @@ def send_email_sync(to_email: str, subject: str, body_html: str):
     if not to_email or "@" not in to_email:
         return False
     try:
-        smtp_server = getattr(settings, 'MAIL_SERVER', None) or getattr(settings, 'BREVO_SMTP_SERVER', 'smtp-relay.brevo.com')
-        smtp_user = getattr(settings, 'MAIL_USERNAME', None) or getattr(settings, 'BREVO_SMTP_USER', '')
-        smtp_pass = getattr(settings, 'MAIL_PASSWORD', None) or getattr(settings, 'BREVO_SMTP_PASSWORD', '')
-        smtp_port = getattr(settings, 'MAIL_PORT', None) or getattr(settings, 'BREVO_SMTP_PORT', 587)
+        smtp_server = os.getenv("EMAIL_HOST") or os.getenv("MAIL_SERVER") or os.getenv("BREVO_SMTP_SERVER") or os.getenv("SMTP_SERVER") or "smtp-relay.brevo.com"
+        smtp_port = int(os.getenv("EMAIL_PORT") or os.getenv("MAIL_PORT") or os.getenv("BREVO_SMTP_PORT") or 587)
+        smtp_pass = os.getenv("EMAIL_PASS") or os.getenv("MAIL_PASSWORD") or os.getenv("BREVO_SMTP_PASSWORD") or os.getenv("SMTP_PASS") or os.getenv("BREVO_KEY") or ""
+        smtp_user = os.getenv("EMAIL_USER") or os.getenv("MAIL_USERNAME") or os.getenv("BREVO_SMTP_USER") or os.getenv("SMTP_USER") or os.getenv("EMAIL_FROM") or ""
+        sender_email = os.getenv("EMAIL_FROM") or os.getenv("SENDER_EMAIL") or smtp_user or "effutulibrarynetwork@gmail.com"
 
-        if not smtp_server or not smtp_user or not smtp_pass:
-            print(f"[DEMO EMAIL] To: {to_email} | Subject: {subject}")
+        if not smtp_pass:
+            print(f"[EMAIL NOT SENT - MISSING CREDENTIALS] To: {to_email} | Subject: {subject} | Please ensure EMAIL_PASS or Brevo SMTP Key is set in Render Environment Variables.")
             return False
+
+        if not smtp_user:
+            smtp_user = sender_email
 
         msg = MIMEText(body_html, 'html')
         msg['Subject'] = subject
-        msg['From'] = getattr(settings, 'SENDER_EMAIL', None) or smtp_user
+        msg['From'] = f"Effutu Library Network <{sender_email}>"
         msg['To'] = to_email
 
-        server = smtplib.SMTP(smtp_server, int(smtp_port), timeout=10)
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=12)
         server.starttls()
         server.login(smtp_user, smtp_pass)
         server.send_message(msg)
         server.quit()
+        print(f"[EMAIL DISPATCH SUCCESS] Sent email to {to_email} via {smtp_server}")
         return True
     except Exception as e:
-        print(f"[EMAIL DISPATCH ERROR] {e}")
+        print(f"[EMAIL DISPATCH ERROR] Failed to send email to {to_email}: {e}")
         return False
 
 def send_email(to_email: str, subject: str, body_html: str):
@@ -339,8 +344,8 @@ async def login_page(msg: str = None):
 
             <form method="post" action="/auth/login" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">ID Number / Phone / Email</label>
-                    <input name="email" type="text" placeholder="Enter ID number, phone, or email" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ghana Card / Voter ID / School ID / Email / Phone</label>
+                    <input name="email" type="text" placeholder="Ghana Card / Voter ID / School ID / Email / Phone" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Password</label>
@@ -780,7 +785,7 @@ async def forgot_password_page():
             const alertDiv = document.getElementById('forgot-alert');
             const email = document.getElementById('email').value;
             alertDiv.classList.remove('hidden');
-            alertDiv.textContent = 'Processing request...';
+            alertDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Processing request...';
             try {
                 const res = await fetch('/api/auth/forgot-password', {
                     method: 'POST',
@@ -788,9 +793,22 @@ async def forgot_password_page():
                     body: JSON.stringify({ email: email })
                 });
                 const data = await res.json();
-                alertDiv.textContent = data.message || 'If this email exists, a reset link has been sent!';
+                if (data.reset_link) {
+                    alertDiv.innerHTML = `
+                        <div class="space-y-2 text-left">
+                            <p class="text-xs font-semibold text-emerald-900"><i class="fa-solid fa-paper-plane text-emerald-600 mr-1"></i> Notice dispatched to <b>${email}</b>.</p>
+                            <div class="p-2.5 bg-emerald-100/70 border border-emerald-300 rounded-lg text-center">
+                                <a href="${data.reset_link}" class="inline-block w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded shadow transition">
+                                    🔑 Click Here to Reset Password Now
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    alertDiv.textContent = data.message || 'If an account exists, a reset link has been dispatched to your inbox!';
+                }
             } catch(ex) {
-                alertDiv.textContent = 'If this email exists, a reset link has been sent to your inbox!';
+                alertDiv.textContent = 'If an account exists, a reset link has been dispatched to your inbox!';
             }
         });
         </script>
@@ -848,6 +866,10 @@ async def forgot_password_api(
         """
 
         send_email(user.email, "Reset Your Password - Effutu Library", email_html)
+        return JSONResponse(content={
+            "message": "If email exists, reset link sent. Please check your inbox.",
+            "reset_link": reset_link
+        })
 
     return JSONResponse(content={"message": "If email exists, reset link sent. Please check your inbox."})
 

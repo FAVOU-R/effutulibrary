@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
@@ -364,6 +364,111 @@ async def verify_physical(
             )
     except Exception as ex:
         print(f"[VERIFY EMAIL DISPATCH WARNING] {ex}")
+
+    return RedirectResponse(url="/librarian/users", status_code=303)
+
+@router.post("/users/{user_id}/reject")
+@router.get("/users/{user_id}/reject")
+@router.post("/librarian/users/{user_id}/reject")
+@router.get("/librarian/users/{user_id}/reject")
+async def reject_user_verification(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Notification
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        return HTMLResponse("<h3>User not found</h3>", status_code=404)
+
+    reason = "ID Verification Failed"
+    try:
+        form = await request.form()
+        reason = form.get("reason") or form.get("rejection_reason") or reason
+    except Exception:
+        try:
+            data = await request.json()
+            reason = data.get("reason") or data.get("rejection_reason") or reason
+        except Exception:
+            pass
+
+    u.verification_status = "rejected"
+    u.is_physically_verified = False
+    u.rejection_reason = reason
+    db.commit()
+
+    try:
+        notif = Notification(
+            user_id=u.id,
+            title="Verification Update ⚠️",
+            message=f"Your account verification was declined. Reason: {reason}",
+            type="warning"
+        )
+        db.add(notif)
+        db.commit()
+    except Exception as ex:
+        print(f"[REJECT NOTIF WARNING] {ex}")
+
+    try:
+        if u.email:
+            send_email(
+                u.email,
+                "Verification Update - Effutu Library",
+                f"<p>Dear {u.full_name},</p><p>Your library account verification was declined.</p><p><b>Reason:</b> {reason}</p><p>Please visit your branch desk with your valid ID for assistance.</p>"
+            )
+    except Exception as ex:
+        print(f"[REJECT USER EMAIL WARNING] {ex}")
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": "User verification rejected", "reason": reason})
+
+    return RedirectResponse(url="/librarian/users", status_code=303)
+
+@router.post("/users/{user_id}/delete")
+@router.get("/users/{user_id}/delete")
+@router.delete("/users/{user_id}/delete")
+@router.post("/librarian/users/{user_id}/delete")
+@router.get("/librarian/users/{user_id}/delete")
+@router.delete("/librarian/users/{user_id}/delete")
+async def delete_user_account(
+    user_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Reservation, UserPoint, PasswordReset, Notification, AILog
+    
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse(status_code=404, content={"error": "User not found"})
+        return HTMLResponse("<h3>User not found</h3>", status_code=404)
+
+    if u.role == "sys_admin" and current_user.role != "sys_admin":
+        raise HTTPException(status_code=403, detail="Cannot delete System Administrator account")
+
+    try:
+        db.query(Reservation).filter(Reservation.user_id == user_id).delete(synchronize_session=False)
+        db.query(UserPoint).filter(UserPoint.user_id == user_id).delete(synchronize_session=False)
+        db.query(PasswordReset).filter(PasswordReset.user_id == user_id).delete(synchronize_session=False)
+        db.query(Notification).filter(Notification.user_id == user_id).delete(synchronize_session=False)
+        db.query(AILog).filter(AILog.user_id == user_id).delete(synchronize_session=False)
+
+        db.delete(u)
+        db.commit()
+    except Exception as ex:
+        db.rollback()
+        print(f"[USER DELETE ERROR] {ex}")
+        try:
+            u.is_active = False
+            u.verification_status = "rejected"
+            db.commit()
+        except Exception:
+            pass
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": "User deleted successfully"})
 
     return RedirectResponse(url="/librarian/users", status_code=303)
 
