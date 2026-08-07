@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-dotenv
+pydantic
+pydantic[email]
+email-validator
+python-multipart
+python-jose[cryptography]
+jinja2
+openai
+groq
+qrcode[pil]
+Pillow
