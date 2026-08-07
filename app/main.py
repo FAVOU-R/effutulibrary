@@ -290,6 +290,12 @@ def qr_scan_page(request: Request, db: Session = Depends(get_db)):
         "current_user": user
     })
 
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "app": "Effutu Library Network"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=10000, reload=True)
+    port = int(os.getenv("PORT", 10000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
