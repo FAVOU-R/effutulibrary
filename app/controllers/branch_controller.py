@@ -37,11 +37,14 @@ def add_branch(
     return JSONResponse(content={"message": "Branch created successfully", "branch_id": new_br.id})
 
 @router.post("/{branch_id}/edit")
+@router.post("/edit/{branch_id}")
 def edit_branch(
     branch_id: int,
+    code: str = Form(None),
     name: str = Form(...),
     location: str = Form(...),
     status: str = Form("active"),
+    is_hq: bool = Form(False),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -52,11 +55,14 @@ def edit_branch(
     if not br:
         raise HTTPException(status_code=404, detail="Branch not found")
     
+    if code:
+        br.code = code.strip().upper()
     br.name = name.strip()
     br.location = location.strip()
     br.status = status
+    br.is_hq = is_hq
     db.commit()
-    return JSONResponse(content={"message": "Branch updated successfully"})
+    return JSONResponse(content={"message": f"Branch '{br.name}' updated successfully!"})
 
 @router.post("/{branch_id}/toggle")
 @router.post("/toggle-status/{branch_id}")

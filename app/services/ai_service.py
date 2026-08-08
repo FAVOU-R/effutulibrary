@@ -169,32 +169,68 @@ def get_user_by_ghana_card_db(db: Session, card_number: str, current_user: User 
     return {"error": "Unauthorized access."}
 
 def web_search_online(query: str):
-    """Perform live real-time internet search using DuckDuckGo HTML & API fallback"""
+    """Perform live real-time internet search using Multi-Engine Fallback (Google News RSS, DuckDuckGo Lite, Wikipedia, DDG API)"""
     if not query:
         return [{"snippet": "Query cannot be empty"}]
     
-    import re, urllib.request, urllib.parse
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    
-    # Try DuckDuckGo HTML scraping
+    import re, urllib.request, urllib.parse, xml.etree.ElementTree as ET
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    results = []
+
+    # 1. Try Google News RSS Feed (Best for live real-time breaking news, WASSCE timetables, current events)
     try:
-        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}"
         req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            xml_content = resp.read()
+            root = ET.fromstring(xml_content)
+            items = root.findall('.//item')
+            for item in items[:4]:
+                title = item.find('title')
+                pubDate = item.find('pubDate')
+                t_text = title.text if title is not None else ""
+                d_text = pubDate.text if pubDate is not None else ""
+                if t_text:
+                    results.append({"snippet": f"Headline: {t_text} (Published: {d_text})"})
+            if results:
+                return results
+    except Exception as e:
+        print(f"Google News RSS search warning: {e}")
+
+    # 2. Try DuckDuckGo Lite (POST request)
+    try:
+        url = "https://lite.duckduckgo.com/lite/"
+        data = urllib.parse.urlencode({'q': query}).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers)
         with urllib.request.urlopen(req, timeout=5) as resp:
             html = resp.read().decode('utf-8', errors='ignore')
             
-        matches = re.findall(r'class="result__snippet[^">]*">(.*?)</a>', html, re.DOTALL)
-        results = []
-        for m in matches[:4]:
-            clean_text = re.sub(r'<[^>]+>', '', m).strip()
+        snippets = re.findall(r'<td class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
+        for s in snippets[:4]:
+            clean_text = re.sub(r'<[^>]+>', '', s).strip()
             if clean_text:
                 results.append({"snippet": clean_text})
         if results:
             return results
     except Exception as e:
-        print(f"HTML web search warning: {e}")
-        
-    # Fallback to DuckDuckGo Instant Answer API
+        print(f"DuckDuckGo Lite search warning: {e}")
+
+    # 3. Try Wikipedia OpenSearch API
+    try:
+        url = f"https://en.wikipedia.org/w/api.php?action=opensearch&search={urllib.parse.quote(query)}&limit=3&namespace=0&format=json"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            wiki_data = json.loads(resp.read().decode('utf-8'))
+            if len(wiki_data) >= 3 and wiki_data[2]:
+                for desc in wiki_data[2][:3]:
+                    if desc:
+                        results.append({"snippet": desc})
+                if results:
+                    return results
+    except Exception as wiki_err:
+        print(f"Wikipedia API search warning: {wiki_err}")
+
+    # 4. Fallback to DuckDuckGo Instant Answer API
     try:
         url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
         req = urllib.request.Request(url, headers=headers)
@@ -204,16 +240,15 @@ def web_search_online(query: str):
             if abstract:
                 return [{"snippet": abstract}]
             related = data.get("RelatedTopics", [])
-            results = []
             for r in related[:3]:
                 if isinstance(r, dict) and "Text" in r:
                     results.append({"snippet": r["Text"]})
             if results:
                 return results
     except Exception as api_err:
-        print(f"API web search warning: {api_err}")
+        print(f"DDG Instant API warning: {api_err}")
 
-    return [{"snippet": f"Live web search checked for '{query}'. Please verify latest updates on the official WAEC Ghana portal."}]
+    return [{"snippet": f"Live web search checked online for '{query}'. Please verify latest updates on the official WAEC Ghana portal (waecgh.org)."}]
 
 tools_schema = [
     {
@@ -234,7 +269,7 @@ tools_schema = [
         "type": "function",
         "function": {
             "name": "web_search",
-            "description": "Perform live internet web search for current events, WAEC/WASSCE latest news, educational updates, or general topics.",
+            "description": "Perform live real-time internet web search for current events, WAEC/WASSCE latest news, educational updates, or general topics.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -283,7 +318,12 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
     user_name = getattr(current_user, "full_name", "Guest") if current_user else "Guest Patron"
 
     system_prompt = f"""
-You are Araba, Effutu Library assistant. Help JHS/SHS students with WASSCE & BECE past questions, explain simply (Photosynthesis, Algebra, etc). Always suggest a relevant library book. Friendly Ghanaian tone, simple English. Akwaaba is your greeting.
+You are Araba, the intelligent, friendly Ghanaian AI assistant for the Effutu Municipal Library Network.
+Akwaaba is your standard Ghanaian greeting!
+
+SYSTEM CAPABILITIES & LIVE INTERNET ACCESS:
+- REAL-TIME LIVE WEB SEARCH (`web_search` tool): When asked about latest news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, or real-time internet questions, YOU MUST CALL THE `web_search` TOOL to fetch live information online.
+- BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
 
 Active Session User: {user_name} (Role: {user_role})
 

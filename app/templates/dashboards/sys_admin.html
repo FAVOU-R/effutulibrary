@@ -57,6 +57,74 @@
         </div>
     </div>
 
+    <!-- Administration Quick Actions Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-wrap justify-between items-center gap-4">
+        <div>
+            <h2 class="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-emerald-600"></i> System Administration Controls
+            </h2>
+            <p class="text-[11px] text-slate-500 font-medium">Provision staff accounts, manage municipal branches, and configure system rules.</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+            <button onclick="document.getElementById('staff-modal').classList.remove('hidden')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 hover:scale-105">
+                <i class="fa-solid fa-user-plus text-emerald-400"></i> Create Staff Member
+            </button>
+            <button onclick="document.getElementById('branch-modal').classList.remove('hidden')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-2 hover:scale-105">
+                <i class="fa-solid fa-plus-circle"></i> Add Branch
+            </button>
+        </div>
+    </div>
+
+    <!-- Prominent Staff Provisioning Card (Top Section) -->
+    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-sm space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-emerald-600 text-sm"></i>
+                    Provision Staff Member Account
+                </h3>
+                <p class="text-[11px] text-slate-500 mt-0.5 font-medium">Register Librarians, HQ Central Admins, or System Admins for municipal library branches.</p>
+            </div>
+            <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">Active Provisioner</span>
+        </div>
+        
+        <form id="create-staff-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                <input type="text" name="full_name" placeholder="e.g. Abena Ghartey" required class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Staff Email</label>
+                <input type="email" name="email" placeholder="staff@effutulibrary.gov.gh" required class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Password</label>
+                <input type="password" name="password" placeholder="••••••••" required class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Assigned Role</label>
+                <select name="role" required class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
+                    <option value="librarian">Librarian (Branch Operations)</option>
+                    <option value="hq_admin">HQ Admin (Central Oversight)</option>
+                    <option value="sys_admin">System Admin (Full Access)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Assigned Library Branch</label>
+                <select name="branch_id" required class="w-full text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
+                    {% for b in branches %}
+                        <option value="{{ b.id }}">{{ b.name }} ({{ b.code }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 transition flex items-center justify-center gap-2 hover:scale-[1.02]">
+                    <i class="fa-solid fa-user-plus"></i> Create Staff Member
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Branch Management Section -->
     <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
         <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
@@ -96,15 +164,28 @@
                         </td>
                         <td class="p-3.5">
                             {% if b.status == 'active' %}
-                                <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">ACTIVE</span>
+                                <span class="bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-[11px] px-3 py-1 rounded-lg inline-flex items-center gap-1.5 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ACTIVE
+                                </span>
                             {% else %}
-                                <span class="bg-amber-100 text-amber-800 border border-amber-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">TARGET PLANNED</span>
+                                <span class="bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[11px] px-3 py-1 rounded-lg inline-flex items-center gap-1.5 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> TARGET PLANNED
+                                </span>
                             {% endif %}
                         </td>
-                        <td class="p-3.5 text-right">
-                            <button onclick="toggleBranch({{ b.id }})" class="text-xs text-emerald-700 hover:text-emerald-800 font-bold hover:underline">
-                                Toggle Status
+                        <td class="p-3.5 text-right flex items-center justify-end gap-2">
+                            <button onclick="openEditModal({{ b.id }}, '{{ b.code }}', '{{ b.name|escape }}', '{{ b.location|escape }}', '{{ b.status }}', {{ 'true' if b.is_hq else 'false' }})" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-300 transition inline-flex items-center gap-1.5 hover:scale-105">
+                                <i class="fa-solid fa-pen-to-square text-slate-500"></i> Edit
                             </button>
+                            {% if b.status == 'active' %}
+                                <button onclick="toggleBranch({{ b.id }})" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition inline-flex items-center gap-1.5 hover:scale-105">
+                                    <i class="fa-solid fa-clock"></i> Set to Target
+                                </button>
+                            {% else %}
+                                <button onclick="toggleBranch({{ b.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-sm transition inline-flex items-center gap-1.5 hover:scale-105">
+                                    <i class="fa-solid fa-circle-check"></i> Activate Branch
+                                </button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -113,54 +194,110 @@
         </div>
     </div>
 
-    <!-- Staff Creation Section -->
-    <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
-        <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-user-shield text-emerald-600 text-sm"></i>
-            Create Staff Account (Librarian / HQ Admin)
-        </h3>
-        
-        <form id="create-staff-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <input type="text" name="full_name" placeholder="Staff Name" required class="text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
-            <input type="email" name="email" placeholder="staff@effutu.gov.gh" required class="text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
-            <input type="password" name="password" placeholder="Password" required class="text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
-            <select name="role" required class="text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
-                <option value="librarian">Librarian</option>
-                <option value="hq_admin">HQ Admin</option>
-                <option value="sys_admin">System Admin</option>
-            </select>
-            <select name="branch_id" required class="text-xs p-3 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 focus:outline-none">
-                {% for b in branches %}
-                    <option value="{{ b.id }}">{{ b.name }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="sm:col-span-2 lg:col-span-5 bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 transition">
-                Create Staff Member
-            </button>
+</div>
+
+<!-- Modal: Create Staff Account -->
+<div id="staff-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-lg w-full rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-emerald-600"></i> Provision Staff Member Account
+            </h3>
+            <button onclick="document.getElementById('staff-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="modal-staff-form" class="space-y-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                <input type="text" name="full_name" placeholder="Staff Name" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Staff Email</label>
+                <input type="email" name="email" placeholder="staff@effutulibrary.gov.gh" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Password</label>
+                <input type="password" name="password" placeholder="••••••••" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Role</label>
+                    <select name="role" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                        <option value="librarian">Librarian</option>
+                        <option value="hq_admin">HQ Admin</option>
+                        <option value="sys_admin">System Admin</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-700 uppercase mb-1">Branch</label>
+                    <select name="branch_id" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+                        {% for b in branches %}
+                            <option value="{{ b.id }}">{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl text-xs font-bold shadow-md">Create Staff Account</button>
         </form>
     </div>
-
 </div>
 
 <!-- Modal: Add New Branch -->
 <div id="branch-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white max-w-md w-full rounded-lg p-6 shadow-xl border border-slate-200">
+    <div class="bg-white max-w-md w-full rounded-2xl p-6 shadow-xl border border-slate-200">
         <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-slate-800">Add New Library Branch</h3>
             <button onclick="document.getElementById('branch-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <form id="add-branch-form" class="space-y-3">
-            <input type="text" name="code" placeholder="Branch Code (e.g. BR-EFF-05)" required class="w-full text-xs p-2 border rounded">
-            <input type="text" name="name" placeholder="Branch Name (e.g. Atekyedo Library)" required class="w-full text-xs p-2 border rounded">
-            <input type="text" name="location" placeholder="Location / Community" required class="w-full text-xs p-2 border rounded">
-            <select name="status" class="w-full text-xs p-2 border rounded bg-white">
+            <input type="text" name="code" placeholder="Branch Code (e.g. BR-EFF-05)" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            <input type="text" name="name" placeholder="Branch Name (e.g. Atekyedo Library)" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            <input type="text" name="location" placeholder="Location / Community" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
+            <select name="status" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl">
                 <option value="active">Active</option>
                 <option value="target">Target / Planned</option>
             </select>
             <label class="flex items-center gap-2 text-xs font-semibold text-slate-700">
                 <input type="checkbox" name="is_hq" value="true"> Is HQ Central Library
             </label>
-            <button type="submit" class="w-full btn-effutu py-2 text-xs font-bold">Save Branch</button>
+            <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl text-xs font-bold shadow-md">Save Branch</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit Existing Branch Details -->
+<div id="edit-branch-modal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-pen-to-square text-emerald-600"></i> Edit Library Branch Details
+            </h3>
+            <button onclick="document.getElementById('edit-branch-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="edit-branch-form" class="space-y-3">
+            <input type="hidden" id="edit-branch-id">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch Code</label>
+                <input type="text" id="edit-branch-code" name="code" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600 font-mono">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Branch Name</label>
+                <input type="text" id="edit-branch-name" name="name" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Location / Community</label>
+                <input type="text" id="edit-branch-location" name="location" required class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Operating Status</label>
+                <select id="edit-branch-status" name="status" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-emerald-600">
+                    <option value="active">Active</option>
+                    <option value="target">Target / Planned</option>
+                </select>
+            </div>
+            <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 pt-1">
+                <input type="checkbox" id="edit-branch-hq" name="is_hq" value="true"> Is HQ Central Library
+            </label>
+            <button type="submit" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-900/20 transition">Update Branch Details</button>
         </form>
     </div>
 </div>
@@ -184,6 +321,42 @@ document.getElementById('create-staff-form').addEventListener('submit', async fu
     const data = await res.json();
     alert(data.message || data.error);
     if (res.ok) this.reset();
+});
+
+document.getElementById('modal-staff-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const fd = new FormData(this);
+    const res = await fetch('/api/users/create-staff', { method: 'POST', body: fd });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if (res.ok) {
+        this.reset();
+        document.getElementById('staff-modal').classList.add('hidden');
+    }
+});
+
+function openEditModal(id, code, name, location, status, isHq) {
+    document.getElementById('edit-branch-id').value = id;
+    document.getElementById('edit-branch-code').value = code;
+    document.getElementById('edit-branch-name').value = name;
+    document.getElementById('edit-branch-location').value = location;
+    document.getElementById('edit-branch-status').value = status;
+    document.getElementById('edit-branch-hq').checked = isHq;
+    document.getElementById('edit-branch-modal').classList.remove('hidden');
+}
+
+document.getElementById('edit-branch-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-branch-id').value;
+    const fd = new FormData(this);
+    try {
+        const res = await fetch(`/api/branches/edit/${id}`, { method: 'POST', body: fd });
+        const data = await res.json();
+        alert(data.message || data.detail || "Branch updated successfully!");
+        if (res.ok) window.location.reload();
+    } catch(err) {
+        alert("Error saving branch updates.");
+    }
 });
 
 async function toggleBranch(id) {
