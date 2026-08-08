@@ -34,7 +34,7 @@ from app.controllers.notifications_controller import router as notifications_rou
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Effutu Municipal Library Management System (Central Region, Ghana) - Evergreen ILS Inspired Lightweight Platform",
+    description="Effutu Municipal Library Management System (Central Region, Ghana) - Powered by ITB",
     docs_url="/docs",
     redoc_url="/redoc"
 )
