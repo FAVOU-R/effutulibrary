@@ -13,23 +13,28 @@ from email.mime.text import MIMEText
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 def get_password_hash(p: str) -> str:
-    """Hash password using bcrypt with automatic unique salting"""
+    """Hash password using direct bcrypt with 12 rounds of dynamic salting"""
     try:
-        import passlib.hash
-        return passlib.hash.bcrypt.hash(p)
-    except Exception:
+        import bcrypt
+        pw_bytes = p.encode('utf-8')[:72]
+        salt = bcrypt.gensalt(rounds=12)
+        return bcrypt.hashpw(pw_bytes, salt).decode('utf-8')
+    except Exception as e:
+        print(f"Bcrypt hash fallback: {e}")
         salt = "effutu_ghana_salt_2026"
         return hashlib.sha256(f"{p}{salt}".encode('utf-8')).hexdigest()
 
 def verify_password(plain: str, hashed: str) -> bool:
-    """Verify password supporting bcrypt hashes as well as legacy SHA-256 hashes"""
+    """Verify password supporting bcrypt hashes ($2b$) and legacy SHA-256 hashes"""
     if not hashed:
         return False
     if hashed.startswith("$2b$") or hashed.startswith("$2a$") or hashed.startswith("$2y$"):
         try:
-            import passlib.hash
-            return passlib.hash.bcrypt.verify(plain, hashed)
-        except Exception:
+            import bcrypt
+            pw_bytes = plain.encode('utf-8')[:72]
+            return bcrypt.checkpw(pw_bytes, hashed.encode('utf-8'))
+        except Exception as e:
+            print(f"Bcrypt verify error: {e}")
             return False
     salt = "effutu_ghana_salt_2026"
     return hashlib.sha256(f"{plain}{salt}".encode('utf-8')).hexdigest() == hashed
