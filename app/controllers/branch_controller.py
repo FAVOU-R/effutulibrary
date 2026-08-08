@@ -59,6 +59,7 @@ def edit_branch(
     return JSONResponse(content={"message": "Branch updated successfully"})
 
 @router.post("/{branch_id}/toggle")
+@router.post("/toggle-status/{branch_id}")
 def toggle_branch_status(
     branch_id: int,
     db: Session = Depends(get_db),
@@ -71,9 +72,9 @@ def toggle_branch_status(
     if not br:
         raise HTTPException(status_code=404, detail="Branch not found")
     
-    br.status = "inactive" if br.status == "active" else "active"
+    br.status = "target" if br.status == "active" else "active"
     db.commit()
-    return JSONResponse(content={"message": f"Branch status changed to {br.status}"})
+    return JSONResponse(content={"message": f"Branch status for '{br.name}' changed to {br.status.upper()}!"})
 
 @router.post("/{branch_id}/delete")
 def delete_branch(
