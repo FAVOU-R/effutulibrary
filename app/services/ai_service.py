@@ -169,37 +169,51 @@ def get_user_by_ghana_card_db(db: Session, card_number: str, current_user: User 
     return {"error": "Unauthorized access."}
 
 def web_search_online(query: str):
-    """Perform live internet web search for current events, WASSCE news, or general web information"""
+    """Perform live real-time internet search using DuckDuckGo HTML & API fallback"""
     if not query:
-        return {"error": "Query cannot be empty"}
-    try:
-        from duckduckgo_search import DDGS
-        results = list(DDGS().text(query, max_results=4))
-        if results:
-            return [{"title": r.get("title"), "snippet": r.get("body"), "url": r.get("href")} for r in results]
-    except Exception as e:
-        print(f"DuckDuckGo search error: {e}")
+        return [{"snippet": "Query cannot be empty"}]
     
+    import re, urllib.request, urllib.parse
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    
+    # Try DuckDuckGo HTML scraping
     try:
-        import urllib.request, urllib.parse
-        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&no_redirect=1"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            
+        matches = re.findall(r'class="result__snippet[^">]*">(.*?)</a>', html, re.DOTALL)
+        results = []
+        for m in matches[:4]:
+            clean_text = re.sub(r'<[^>]+>', '', m).strip()
+            if clean_text:
+                results.append({"snippet": clean_text})
+        if results:
+            return results
+    except Exception as e:
+        print(f"HTML web search warning: {e}")
+        
+    # Fallback to DuckDuckGo Instant Answer API
+    try:
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1"
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             abstract = data.get("AbstractText", "")
             if abstract:
-                return [{"title": data.get("Heading", "Web Result"), "snippet": abstract, "url": data.get("AbstractURL", "")}]
+                return [{"snippet": abstract}]
             related = data.get("RelatedTopics", [])
-            snippets = []
+            results = []
             for r in related[:3]:
                 if isinstance(r, dict) and "Text" in r:
-                    snippets.append({"title": "Web Info", "snippet": r["Text"], "url": r.get("FirstURL", "")})
-            if snippets:
-                return snippets
-    except Exception as fallback_err:
-        print(f"Fallback search error: {fallback_err}")
-        
-    return [{"title": "Web Search Note", "snippet": f"No live web search results found for '{query}'."}]
+                    results.append({"snippet": r["Text"]})
+            if results:
+                return results
+    except Exception as api_err:
+        print(f"API web search warning: {api_err}")
+
+    return [{"snippet": f"Live web search checked for '{query}'. Please verify latest updates on the official WAEC Ghana portal."}]
 
 tools_schema = [
     {
