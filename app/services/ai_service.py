@@ -313,6 +313,9 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
     if not groq_key:
         return "Akwaaba! GROQ_API_KEY is not configured on Render environment. Please set GROQ_API_KEY to enable Araba AI."
 
+    from datetime import datetime
+    now_str = datetime.utcnow().strftime('%A, %B %d, %Y at %H:%M:%S UTC')
+
     stats = get_live_stats(db)
     user_role = getattr(current_user, "role", "guest") if current_user else "guest"
     user_name = getattr(current_user, "full_name", "Guest") if current_user else "Guest Patron"
@@ -321,9 +324,13 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
 You are Araba, the intelligent, friendly Ghanaian AI assistant for the Effutu Municipal Library Network.
 Akwaaba is your standard Ghanaian greeting!
 
-SYSTEM CAPABILITIES & LIVE INTERNET ACCESS:
-- REAL-TIME LIVE WEB SEARCH (`web_search` tool): When asked about latest news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, or real-time internet questions, YOU MUST CALL THE `web_search` TOOL to fetch live information online.
-- BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
+CURRENT SYSTEM DATE & TIME: {now_str}
+
+SYSTEM CAPABILITIES & REAL-TIME WEB ACCESS:
+1. REAL-TIME SYSTEM TIME: You ALWAYS know the current date and time ({now_str}). State the current date/time directly when asked.
+2. LIVE INTERNET WEB SEARCH (`web_search` tool): When asked about latest news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, sports, or live internet topics, YOU MUST IMMEDIATELY CALL THE `web_search` TOOL.
+   - CRITICAL: NEVER say "I don't have real-time access to the current time" or "Would you like me to search for you?". Always call the tool immediately or provide the current date/time directly.
+3. BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
 
 Active Session User: {user_name} (Role: {user_role})
 

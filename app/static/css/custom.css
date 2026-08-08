@@ -199,3 +199,25 @@ a:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08);
 }
+
+/* Mobile Responsiveness & Accessibility Enhancements */
+@media (max-width: 640px) {
+  #chatbot-widget {
+    bottom: 16px;
+    right: 16px;
+  }
+  #chatbot-window {
+    width: calc(100vw - 32px);
+    height: 75vh;
+    max-height: 500px;
+  }
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Smooth Focus State for Form Controls */
+input:focus, select:focus, textarea:focus, button:focus-visible {
+  outline: 2px solid #047857 !important;
+  outline-offset: 1px;
+}
