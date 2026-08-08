@@ -168,6 +168,39 @@ def get_user_by_ghana_card_db(db: Session, card_number: str, current_user: User 
 
     return {"error": "Unauthorized access."}
 
+def web_search_online(query: str):
+    """Perform live internet web search for current events, WASSCE news, or general web information"""
+    if not query:
+        return {"error": "Query cannot be empty"}
+    try:
+        from duckduckgo_search import DDGS
+        results = list(DDGS().text(query, max_results=4))
+        if results:
+            return [{"title": r.get("title"), "snippet": r.get("body"), "url": r.get("href")} for r in results]
+    except Exception as e:
+        print(f"DuckDuckGo search error: {e}")
+    
+    try:
+        import urllib.request, urllib.parse
+        url = f"https://api.duckduckgo.com/?q={urllib.parse.quote(query)}&format=json&no_html=1&no_redirect=1"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            abstract = data.get("AbstractText", "")
+            if abstract:
+                return [{"title": data.get("Heading", "Web Result"), "snippet": abstract, "url": data.get("AbstractURL", "")}]
+            related = data.get("RelatedTopics", [])
+            snippets = []
+            for r in related[:3]:
+                if isinstance(r, dict) and "Text" in r:
+                    snippets.append({"title": "Web Info", "snippet": r["Text"], "url": r.get("FirstURL", "")})
+            if snippets:
+                return snippets
+    except Exception as fallback_err:
+        print(f"Fallback search error: {fallback_err}")
+        
+    return [{"title": "Web Search Note", "snippet": f"No live web search results found for '{query}'."}]
+
 tools_schema = [
     {
         "type": "function",
@@ -177,7 +210,21 @@ tools_schema = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Search query keyword"}
+                    "query": {"type": "string", "description": "Search query keyword e.g. WASSCE, Biology, Mathematics"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Perform live internet web search for current events, WAEC/WASSCE latest news, educational updates, or general topics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Web search query e.g. WASSCE 2026 timetable, Ghana education news"}
                 },
                 "required": ["query"]
             }
@@ -190,7 +237,9 @@ tools_schema = [
             "description": "Get overdue books info. Checks current user role to restrict visibility per Ghana Data Protection Act.",
             "parameters": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                    "filter_name": {"type": "string", "description": "Optional patron filter name"}
+                }
             }
         }
     },
@@ -213,7 +262,7 @@ tools_schema = [
 def get_ai_response(message: str, db: Session = None, current_user: User = None) -> str:
     groq_key = os.getenv("GROQ_API_KEY")
     if not groq_key:
-        return "GROQ_API_KEY not found in environment. Please set GROQ_API_KEY on Render."
+        return "Akwaaba! GROQ_API_KEY is not configured on Render environment. Please set GROQ_API_KEY to enable Araba AI."
 
     stats = get_live_stats(db)
     user_role = getattr(current_user, "role", "guest") if current_user else "guest"
@@ -248,13 +297,21 @@ SECURITY & PRIVACY RULES:
             {"role": "user", "content": message}
         ]
 
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            tools=tools_schema,
-            tool_choice="auto",
-            max_tokens=500
-        )
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                tools=tools_schema,
+                tool_choice="auto",
+                max_tokens=500
+            )
+        except Exception as tool_err:
+            print(f"[GROQ TOOL CALL RETRY WITHOUT TOOLS] Error: {tool_err}")
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=messages,
+                max_tokens=500
+            )
 
         response_message = response.choices[0].message
         tool_calls = getattr(response_message, "tool_calls", None)
@@ -268,6 +325,8 @@ SECURITY & PRIVACY RULES:
                 result = None
                 if fn_name == "search_books":
                     result = search_books_db(db, args.get("query", ""))
+                elif fn_name == "web_search":
+                    result = web_search_online(args.get("query", ""))
                 elif fn_name == "get_overdue_list":
                     result = get_overdue_list_db(db, current_user=current_user)
                 elif fn_name == "get_user_by_ghana_card":
@@ -287,7 +346,7 @@ SECURITY & PRIVACY RULES:
             )
             return second_response.choices[0].message.content
 
-        return response_message.content or "No response from AI."
+        return response_message.content or "Akwaaba! How can I assist you with Effutu Library resources today?"
 
     except ImportError:
         return "Groq package not installed. Please run `pip install groq`."
