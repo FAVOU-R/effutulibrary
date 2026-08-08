@@ -13,3 +13,5 @@ openai
 groq
 qrcode[pil]
 Pillow
+passlib[bcrypt]
+bcrypt

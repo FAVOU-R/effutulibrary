@@ -13,11 +13,26 @@ from email.mime.text import MIMEText
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 def get_password_hash(p: str) -> str:
-    salt = "effutu_ghana_salt_2026"
-    return hashlib.sha256(f"{p}{salt}".encode('utf-8')).hexdigest()
+    """Hash password using bcrypt with automatic unique salting"""
+    try:
+        import passlib.hash
+        return passlib.hash.bcrypt.hash(p)
+    except Exception:
+        salt = "effutu_ghana_salt_2026"
+        return hashlib.sha256(f"{p}{salt}".encode('utf-8')).hexdigest()
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return get_password_hash(plain) == hashed
+    """Verify password supporting bcrypt hashes as well as legacy SHA-256 hashes"""
+    if not hashed:
+        return False
+    if hashed.startswith("$2b$") or hashed.startswith("$2a$") or hashed.startswith("$2y$"):
+        try:
+            import passlib.hash
+            return passlib.hash.bcrypt.verify(plain, hashed)
+        except Exception:
+            return False
+    salt = "effutu_ghana_salt_2026"
+    return hashlib.sha256(f"{plain}{salt}".encode('utf-8')).hexdigest() == hashed
 
 def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     to_encode = data.copy()
