@@ -19,64 +19,65 @@
 </head>
 <body class="bg-slate-100 flex flex-col min-h-screen text-slate-900 antialiased selection:bg-emerald-600 selection:text-white font-sans">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-slate-900 text-white border-b border-slate-800 shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16 gap-2">
-                <!-- Brand Logo & Title -->
-                <a href="/" class="flex items-center space-x-2.5 sm:space-x-3 group min-w-0">
-                    <div class="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 group-hover:bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-emerald-900/50 transition shrink-0">
-                        <i class="fa-solid fa-book-open-reader text-base sm:text-xl"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <span class="font-extrabold text-xs sm:text-base tracking-tight block text-white group-hover:text-emerald-400 transition truncate">EFFUTU MUNICIPAL LIBRARY</span>
-                        <span class="text-[10px] text-slate-400 font-medium truncate hidden sm:block">Central Region, Ghana • 19 Branches Network</span>
-                    </div>
-                </a>
-
-                <!-- User Profile & Actions -->
-                <div class="flex items-center space-x-2 sm:space-x-4 shrink-0">
+    <!-- Top Navigation Bar (Mobile & Desktop Responsive) -->
+    <header class="bg-[#102237] text-white border-b border-slate-800/80 shadow-xl sticky top-0 z-50 px-2 sm:px-4 py-2">
+        <div class="max-w-7xl mx-auto bg-[#102237] rounded-2xl px-3 sm:px-6 py-2 border border-emerald-500/20 shadow-lg">
+            <div class="flex justify-between items-center h-12 sm:h-14 gap-2">
+                
+                <!-- Left Side: Mobile Hamburger & Stacked Brand Logo -->
+                <div class="flex items-center space-x-2.5 sm:space-x-4 min-w-0">
                     {% if current_user %}
-                        <button onclick="toggleMobileNav()" class="md:hidden text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition" title="Toggle Navigation Menu">
-                            <i class="fa-solid fa-bars text-lg"></i>
-                        </button>
+                    <button onclick="toggleMobileNav()" class="md:hidden text-emerald-400 hover:text-emerald-300 p-1.5 focus:outline-none transition shrink-0" title="Toggle Navigation Menu">
+                        <i class="fa-solid fa-bars text-xl sm:text-2xl"></i>
+                    </button>
+                    {% endif %}
 
-                        <a href="/notifications" class="relative text-slate-300 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition" title="Notifications">
-                            <i class="fa-solid fa-bell text-base sm:text-lg"></i>
-                            <span id="notif-badge" class="hidden absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">0</span>
+                    <a href="/" class="flex items-center space-x-2 sm:space-x-3 group min-w-0">
+                        <div class="w-9 h-9 sm:w-11 sm:h-11 text-emerald-400 flex items-center justify-center shrink-0">
+                            <!-- Leaf inside Book Brand Icon -->
+                            <div class="relative flex items-center justify-center">
+                                <i class="fa-solid fa-book-open text-2xl sm:text-3xl text-emerald-400"></i>
+                                <i class="fa-solid fa-leaf text-xs sm:text-sm text-emerald-300 absolute -top-1 right-0 transform rotate-12"></i>
+                            </div>
+                        </div>
+                        <div class="flex flex-col text-left leading-[1.05] tracking-tight">
+                            <span class="font-extrabold text-[12px] sm:text-base text-white tracking-wider">EFFUTU</span>
+                            <span class="font-extrabold text-[10px] sm:text-xs text-white tracking-wider">MUNICIPAL</span>
+                            <span class="font-extrabold text-[10px] sm:text-xs text-white tracking-wider">LIBRARY</span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Right Side: Notifications, Avatar Ring, Logout -->
+                <div class="flex items-center space-x-3 sm:space-x-5 shrink-0">
+                    {% if current_user %}
+                        <!-- Notification Bell with Green Badge -->
+                        <a href="/notifications" class="relative text-white hover:text-emerald-400 transition p-1" title="Notifications">
+                            <i class="fa-solid fa-bell text-xl sm:text-2xl"></i>
+                            <span id="notif-badge" class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-[#102237] rounded-full"></span>
                         </a>
 
-                        <div class="flex items-center gap-2 sm:gap-3 bg-white/10 hover:bg-white/20 px-2.5 sm:px-3 py-1.5 rounded-xl border border-white/10 transition cursor-pointer group relative" onclick="openProfileModal()" title="Click to edit profile & change avatar">
-                            <div class="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-amber-300 font-extrabold text-xs shadow-inner shrink-0">
+                        <!-- Circular Profile Avatar Ring -->
+                        <div class="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-emerald-400 p-0.5 bg-emerald-500/20 flex items-center justify-center cursor-pointer group" onclick="openProfileModal()" title="Edit Profile & Avatar">
+                            <div class="w-full h-full rounded-full bg-emerald-500 text-white font-black text-sm flex items-center justify-center overflow-hidden shadow-inner">
                                 {% if current_user.avatar_url %}
                                     <img src="{{ current_user.avatar_url }}" id="nav-avatar-img" class="w-full h-full object-cover" alt="Avatar">
                                 {% else %}
                                     <span id="nav-avatar-initial">{{ current_user.full_name[0] }}</span>
                                 {% endif %}
-                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[10px]">
-                                    <i class="fa-solid fa-camera"></i>
-                                </div>
-                            </div>
-                            <div class="hidden sm:block text-left">
-                                <div class="font-extrabold text-xs text-white leading-tight flex items-center gap-1">
-                                    <span>{{ current_user.full_name }}</span>
-                                    <i class="fa-solid fa-pen text-[9px] text-emerald-300 opacity-0 group-hover:opacity-100 transition"></i>
-                                </div>
-                                <span class="text-[11px] text-emerald-300 font-mono font-bold tracking-wide">
-                                    {{ current_user.display_username }} • {{ current_user.role.replace('_', ' ').upper() }}
-                                </span>
                             </div>
                         </div>
 
-                        <a href="/auth/logout" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-500/30 text-xs font-extrabold px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-right-from-bracket text-xs"></i>
-                            <span class="hidden xs:inline">Logout</span>
+                        <!-- Logout Exit Door Icon -->
+                        <a href="/auth/logout" class="text-white hover:text-rose-400 p-1 transition" title="Logout">
+                            <i class="fa-solid fa-right-from-bracket text-xl sm:text-2xl"></i>
                         </a>
                     {% else %}
                         <a href="/login" class="text-xs font-extrabold text-slate-200 hover:text-white px-2.5 sm:px-3.5 py-2 transition">Login</a>
-                        <a href="/register" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-white shadow-md shadow-emerald-900/30 transition">Register</a>
+                        <a href="/register" class="bg-emerald-600 hover:bg-emerald-500 text-xs font-extrabold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-white shadow-md transition">Register</a>
                     {% endif %}
                 </div>
+
             </div>
         </div>
     </header>
