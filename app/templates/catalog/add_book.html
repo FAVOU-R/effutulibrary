@@ -68,11 +68,14 @@
             <div>
                 <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category</label>
                 <select id="category" name="category" class="w-full p-2 border rounded text-xs bg-white">
-                    <option value="WASSCE">WASSCE Exam Materials</option>
-                    <option value="Science">Science & Technology</option>
+                    <option value="Story Books & Literature">Story Books & African Literature</option>
                     <option value="Mathematics">Mathematics</option>
-                    <option value="Education">Education & Pedagogy</option>
-                    <option value="General Literature" selected>General Literature</option>
+                    <option value="Science">Science & Technology</option>
+                    <option value="English & Languages">English & Languages</option>
+                    <option value="Social Studies & History">Social Studies & History</option>
+                    <option value="Motivational & Leadership">Motivational & Leadership</option>
+                    <option value="Magazines & Journals">Magazines & Educational Journals</option>
+                    <option value="WASSCE">WASSCE Exam Materials</option>
                 </select>
             </div>
             <div>
@@ -91,16 +94,24 @@
 
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Cover Image URL</label>
-            <input type="text" id="cover_url" name="cover_url" placeholder="https://..." class="w-full p-2 border rounded text-xs">
+            <input type="text" id="cover_url" name="cover_url" placeholder="https://images.unsplash.com/..." class="w-full p-2 border rounded text-xs">
         </div>
 
         <div>
             <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Description / Summary</label>
-            <textarea id="description" name="description" rows="3" class="w-full p-2 border rounded text-xs"></textarea>
+            <textarea id="description" name="description" rows="2" placeholder="Brief book summary..." class="w-full p-2 border rounded text-xs"></textarea>
         </div>
 
-        <button type="submit" class="w-full btn-effutu py-2.5 text-xs font-bold shadow">
-            Save Book & Auto-Generate QR Tokens
+        <div>
+            <label class="block text-xs font-bold text-emerald-900 uppercase mb-1 flex items-center gap-1">
+                <i class="fa-solid fa-file-lines text-emerald-600"></i> Softcopy Digital Content (Full Book Text / Chapters)
+            </label>
+            <p class="text-[11px] text-slate-500 mb-1">Paste chapters or study text below. Patrons can read it in the non-downloadable softcopy reader, and Araba AI will automatically study the content.</p>
+            <textarea id="content_text" name="content_text" rows="6" placeholder="Paste full book chapters, study text, or excerpts here... (e.g. CHAPTER 1: Principles of Chemistry...)" class="w-full p-2.5 border border-emerald-300 rounded-xl text-xs font-mono focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <button type="submit" class="w-full btn-effutu py-2.5 text-xs font-extrabold shadow">
+            Save Book, Softcopy Text & Auto-Generate QR Tokens
         </button>
     </form>
 </div>

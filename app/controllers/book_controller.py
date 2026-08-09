@@ -87,11 +87,17 @@ def get_book_qr(book_id: int, db: Session = Depends(get_db)):
     }
 
 @router.post("")
+@router.post("/add")
 def add_book(
     title: str = Form(...),
     author: str = Form(...),
     isbn: str = Form(None),
-    category: str = Form("General"),
+    category: str = Form("General Literature"),
+    publisher: str = Form(None),
+    pub_year: int = Form(None),
+    cover_url: str = Form(None),
+    description: str = Form(None),
+    content_text: str = Form(None),
     branch_id: int = Form(1),
     copies_count: int = Form(1),
     db: Session = Depends(get_db),
@@ -100,7 +106,30 @@ def add_book(
     if current_user.role not in ["sys_admin", "hq_admin", "librarian"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
     
-    new_book = Book(title=title, author=author, isbn=isbn, category=category)
+    clean_content = content_text.strip() if (content_text and content_text.strip()) else f"""CHAPTER 1: Introduction to {title.strip()}
+
+Author: {author.strip()}
+Category: {category.strip()}
+
+Welcome to the digital softcopy edition of '{title.strip()}'.
+This book is preserved in the Effutu Municipal Library Network softcopy archives.
+
+SECTION 1: Core Content & Study Summary
+{description.strip() if description else 'Detailed study guide, chapter notes, and references for students and patrons.'}
+
+You can read all chapters directly in this non-downloadable softcopy viewer or reserve the physical hard copy at any branch desk."""
+
+    new_book = Book(
+        title=title.strip(),
+        author=author.strip(),
+        isbn=isbn.strip() if (isbn and isbn.strip()) else None,
+        category=category.strip() if category else "General Literature",
+        publisher=publisher.strip() if (publisher and publisher.strip()) else None,
+        pub_year=pub_year,
+        cover_url=cover_url.strip() if (cover_url and cover_url.strip()) else "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400",
+        description=description.strip() if (description and description.strip()) else None,
+        content_text=clean_content
+    )
     db.add(new_book)
     db.commit()
     db.refresh(new_book)
@@ -117,4 +146,7 @@ def add_book(
         db.add(copy)
 
     db.commit()
-    return JSONResponse(content={"message": "Book added successfully", "book_id": new_book.id})
+    return JSONResponse(content={
+        "message": f"Book '{new_book.title}' & softcopy text saved successfully! Araba AI has studied the content.",
+        "book_id": new_book.id
+    })

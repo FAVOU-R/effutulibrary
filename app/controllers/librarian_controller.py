@@ -59,8 +59,20 @@ async def list_users(
 
         sub_text = " • ".join(sub_items) if sub_items else "Patron"
 
-        id_disp = u.ghana_card_number or u.id_number or u.alt_contact or '-'
+        raw_id = u.ghana_card_number or u.id_number or u.alt_contact or '-'
         id_type_label = (u.id_type or 'ghanacard').upper().replace('_', ' ')
+        
+        # PII Protection: Mask Ghana Card & National ID numbers (e.g. GHA-••••••••-3)
+        if raw_id and raw_id != '-':
+            raw_str = str(raw_id).strip()
+            if raw_str.startswith('GHA-') and len(raw_str) > 8:
+                id_disp = f"GHA-••••••••-{raw_str[-1]}"
+            elif len(raw_str) > 4:
+                id_disp = f"••••••••{raw_str[-4:]}"
+            else:
+                id_disp = "••••••••"
+        else:
+            id_disp = "-"
 
         if u.verification_status == "pending" or not u.is_physically_verified:
             v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded'>⏳ Pending</span>"
@@ -69,7 +81,7 @@ async def list_users(
         else:
             v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>✅ Verified</span>"
 
-        photo_link = f"<a href='{u.id_photo_url}' target='_blank' class='text-blue-600 font-bold hover:underline text-[11px]'><i class='fa-solid fa-image'></i> View Photo</a>" if u.id_photo_url else "<span class='text-slate-400'>No Photo</span>"
+        photo_link = f"<a href='{u.id_photo_url}' target='_blank' class='text-blue-600 font-bold hover:underline text-[11px]'><i class='fa-solid fa-image'></i> View Photo ID</a>" if u.id_photo_url else "<span class='text-slate-400'>No Photo</span>"
         branch_name = u.branch.name if u.branch else "Main Branch"
 
         contact_disp = u.email or u.phone or '-'
@@ -80,7 +92,7 @@ async def list_users(
             <td class='p-3 font-mono font-bold text-emerald-800'>{u.member_id or f'ID-{u.id}'}</td>
             <td class='p-3 font-bold text-slate-800'>{u.full_name}<br><span class='text-[10px] text-slate-400 font-normal'>{sub_text}</span></td>
             <td class='p-3 font-mono text-slate-600'>{contact_disp}<br><span class='text-[10px] text-slate-400'>{loc_disp}</span></td>
-            <td class='p-3 font-mono text-slate-600'><b>{id_type_label}:</b> {id_disp}<br>{photo_link}</td>
+            <td class='p-3 font-mono text-slate-600'><span class='font-bold text-slate-700'>{id_type_label}</span><br><span class='text-[11px] text-slate-500 font-mono'>{id_disp}</span><br>{photo_link}</td>
             <td class='p-3 uppercase font-bold text-slate-500'>{u.role.replace('_', ' ')}</td>
             <td class='p-3'>{status_badge}</td>
             <td class='p-3'>{v_badge}</td>

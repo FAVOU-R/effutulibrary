@@ -9,13 +9,20 @@ class AIEngine:
         books = db.query(Book).all()
         results = []
         for b in books:
-            if query_clean in b.title.lower() or query_clean in b.author.lower() or query_clean in b.category.lower() or (b.description and query_clean in b.description.lower()):
+            if (query_clean in b.title.lower() or 
+                query_clean in b.author.lower() or 
+                query_clean in b.category.lower() or 
+                (b.description and query_clean in b.description.lower()) or 
+                (b.content_text and query_clean in b.content_text.lower())):
                 results.append({
                     "id": b.id,
                     "title": b.title,
                     "author": b.author,
                     "category": b.category,
-                    "isbn": b.isbn
+                    "isbn": b.isbn,
+                    "cover_url": b.cover_url or "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300",
+                    "available_copies": db.query(BookCopy).filter(BookCopy.book_id == b.id, BookCopy.status == "available").count(),
+                    "softcopy_excerpt": (b.content_text[:300] + "...") if b.content_text else b.description
                 })
         return results
 

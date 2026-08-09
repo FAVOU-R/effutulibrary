@@ -141,6 +141,7 @@ def on_startup():
         ("users", "username", "VARCHAR(50)"),
         ("users", "profile_picture_url", "VARCHAR(255)"),
         ("reservations", "reject_reason", "TEXT"),
+        ("books", "content_text", "TEXT"),
     ]
 
     try:
@@ -333,6 +334,18 @@ def catalog_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request=request, name="catalog/index.html", context={
         "current_user": user,
         "books": books_data
+    })
+
+@app.get("/read/{book_id}", response_class=HTMLResponse)
+def read_book_page(book_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user_optional(request, db)
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Softcopy book not found")
+    
+    return templates.TemplateResponse(request=request, name="catalog/read_book.html", context={
+        "current_user": user,
+        "book": book
     })
 
 @app.get("/catalog/add", response_class=HTMLResponse)

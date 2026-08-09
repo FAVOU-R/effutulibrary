@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Softcopy Reader: {{ book.title }} - Effutu Municipal Library Network{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    body { display: none !important; }
+}
+</style>
+<div class="max-w-4xl mx-auto space-y-4 select-none" id="reader-container" oncontextmenu="return false;" oncopy="return false;" oncut="return false;">
+
+    <!-- Top Action Bar -->
+    <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex items-center space-x-3 min-w-0">
+            <a href="/catalog" class="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl transition text-xs font-extrabold shrink-0" title="Back to Catalog">
+                <i class="fa-solid fa-arrow-left"></i> Catalog
+            </a>
+            <div class="min-w-0">
+                <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">
+                    {{ book.category }}
+                </span>
+                <h1 class="text-base sm:text-lg font-extrabold text-white truncate leading-tight mt-1">{{ book.title }}</h1>
+                <p class="text-xs text-slate-400 font-medium">By {{ book.author }} • Softcopy Edition</p>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+            <!-- Font Controls & Dark/Light Mode -->
+            <div class="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 space-x-1 text-xs">
+                <button onclick="changeFontSize(-1)" class="p-1.5 hover:text-emerald-400 text-slate-300 font-bold" title="Decrease Font Size">A-</button>
+                <button onclick="changeFontSize(1)" class="p-1.5 hover:text-emerald-400 text-slate-300 font-bold" title="Increase Font Size">A+</button>
+                <button onclick="toggleReaderTheme()" class="p-1.5 hover:text-amber-400 text-slate-300" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+
+            <!-- Initiate Hardcopy Physical Borrow -->
+            <button onclick="reservePhysicalHardcopy({{ book.id }})" class="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md border border-emerald-400 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-truck-ramp-box"></i> Reserve Hard Copy
+            </button>
+        </div>
+    </div>
+
+    <!-- Security & Protection Notice Banner -->
+    <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs flex items-center gap-2.5 shadow-sm">
+        <i class="fa-solid fa-shield-halved text-amber-600 text-base shrink-0"></i>
+        <span><strong>Protected Softcopy Digital Reader:</strong> Printing, copying, and downloading are restricted. Read freely online or reserve the hard copy for physical pick-up at your branch.</span>
+    </div>
+
+    <!-- Main eBook Softcopy Reading Viewport -->
+    <div id="reader-viewport" class="bg-white rounded-2xl border border-slate-200 p-6 sm:p-10 shadow-lg min-h-[500px] text-slate-800 leading-relaxed font-serif text-sm space-y-6 transition-colors duration-300">
+        
+        <!-- Book Cover & Info Header -->
+        <div class="flex flex-col sm:flex-row gap-6 pb-6 border-b border-slate-200 font-sans">
+            <img src="{{ book.cover_url or 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300' }}" class="w-32 h-44 object-cover rounded-xl shadow-md border border-slate-200 shrink-0 mx-auto sm:mx-0">
+            <div class="space-y-2 text-xs text-slate-600 flex-1">
+                <h2 class="text-xl font-extrabold text-slate-900 font-sans leading-tight">{{ book.title }}</h2>
+                <p class="font-bold text-slate-700">Author: {{ book.author }}</p>
+                {% if book.publisher %}
+                <p>Publisher: {{ book.publisher }} ({% if book.pub_year %}{{ book.pub_year }}{% endif %})</p>
+                {% endif %}
+                {% if book.isbn %}
+                <p>ISBN: <span class="font-mono text-slate-800 font-bold">{{ book.isbn }}</span></p>
+                {% endif %}
+                <p class="text-slate-700 bg-slate-100 p-3 rounded-xl border border-slate-200/80 leading-normal font-sans">
+                    {{ book.description or 'Official Ghanaian curriculum & literature softcopy edition.' }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Full Book Content -->
+        <div id="book-content-body" class="whitespace-pre-line leading-loose text-base font-serif text-slate-800 pt-2">
+            {% if book.content_text %}
+            {{ book.content_text }}
+            {% else %}
+            CHAPTER 1: Introduction & Preface
+
+            Welcome to the softcopy digital edition of '{{ book.title }}' by {{ book.author }}.
+            This work is preserved in the Effutu Municipal Library Network softcopy archives.
+
+            SECTION 1: Core Principles & Synopsis
+            This textbook/volume contains essential study material, diagrams, chapter summaries, and references tailored for Ghanaian students, educators, and general readers across the Central Region.
+
+            You can read all chapters directly in this non-downloadable softcopy viewer or click 'Reserve Hard Copy' above to collect the physical book copy at your branch desk.
+            {% endif %}
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 font-sans text-xs">
+            <div class="text-slate-500 font-medium">
+                Effutu Municipal Library Network • Digital Softcopy Archives
+            </div>
+            <button onclick="reservePhysicalHardcopy({{ book.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-book-bookmark"></i> Pick Up Physical Hard Copy at Branch
+            </button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Reserve Modal Handler -->
+<div id="reserve-confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white max-w-md w-full rounded-2xl p-6 shadow-2xl border border-slate-200 text-center space-y-4">
+        <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto text-xl">
+            <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <h3 class="font-extrabold text-base text-slate-900">Initiate Hard Copy Physical Borrow</h3>
+        <p class="text-xs text-slate-600 leading-relaxed">Reserve <strong>{{ book.title }}</strong> for branch pick-up. We will hold the physical book copy at your assigned branch desk for 48 hours.</p>
+        <div class="flex gap-2 pt-2">
+            <button onclick="document.getElementById('reserve-confirm-modal').classList.add('hidden')" class="flex-1 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-xl text-xs">
+                Cancel
+            </button>
+            <button onclick="confirmHardcopyBorrow({{ book.id }})" class="flex-1 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow">
+                Confirm Reservation
+            </button>
+        </div>
+        <div id="reserve-msg" class="hidden text-xs p-2.5 rounded-xl font-bold"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentFontSize = 16;
+function changeFontSize(delta) {
+    currentFontSize = Math.min(Math.max(12, currentFontSize + delta), 24);
+    document.getElementById('book-content-body').style.fontSize = currentFontSize + 'px';
+}
+
+function toggleReaderTheme() {
+    const vp = document.getElementById('reader-viewport');
+    if (vp.classList.contains('bg-slate-950')) {
+        vp.classList.remove('bg-slate-950', 'text-slate-100', 'border-slate-800');
+        vp.classList.add('bg-white', 'text-slate-800', 'border-slate-200');
+    } else {
+        vp.classList.remove('bg-white', 'text-slate-800', 'border-slate-200');
+        vp.classList.add('bg-slate-950', 'text-slate-100', 'border-slate-800');
+    }
+}
+
+// Disable Keyboard Shortcuts (Ctrl+P, Ctrl+S, Ctrl+U, F12)
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && ['p', 's', 'u', 'c'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        alert("Protected Softcopy — Printing, saving, or copying digital content is restricted. You may read online or borrow the hard copy.");
+    }
+    if (e.key === 'F12') {
+        e.preventDefault();
+    }
+});
+
+function reservePhysicalHardcopy(bookId) {
+    document.getElementById('reserve-confirm-modal').classList.remove('hidden');
+}
+
+async function confirmHardcopyBorrow(bookId) {
+    const msgDiv = document.getElementById('reserve-msg');
+    msgDiv.className = "text-xs p-2.5 rounded-xl font-bold bg-slate-100 text-slate-700";
+    msgDiv.textContent = "Processing reservation...";
+    msgDiv.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/api/reservations/reserve/${bookId}`, { method: 'POST' });
+        const data = await res.json();
+
+        if (res.ok) {
+            msgDiv.className = "text-xs p-2.5 rounded-xl font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+            msgDiv.textContent = data.message || "Reservation successful! Visit branch desk within 48 hours.";
+            setTimeout(() => {
+                window.location.href = "/dashboard/patron";
+            }, 1800);
+        } else {
+            msgDiv.className = "text-xs p-2.5 rounded-xl font-bold bg-rose-100 text-rose-800 border border-rose-300";
+            msgDiv.textContent = data.error || "Unable to reserve book";
+        }
+    } catch(e) {
+        msgDiv.className = "text-xs p-2.5 rounded-xl font-bold bg-rose-100 text-rose-800 border border-rose-300";
+        msgDiv.textContent = "Error initiating physical borrow";
+    }
+}
+</script>
+{% endblock %}

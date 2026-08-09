@@ -36,12 +36,17 @@
                     <i class="fa-solid fa-wand-magic-sparkles"></i> AI Search
                 </button>
             </div>
-            <div class="text-[11px] text-emerald-200/80 flex flex-wrap items-center gap-2 font-medium">
-                <span class="font-bold uppercase text-amber-300 text-[10px] tracking-wider">Quick Filters:</span>
-                <button onclick="filterCat('WASSCE')" class="hover:text-white underline decoration-emerald-500 underline-offset-2">WASSCE Exams</button> • 
-                <button onclick="filterCat('Science')" class="hover:text-white underline decoration-emerald-500 underline-offset-2">Science</button> • 
-                <button onclick="filterCat('Mathematics')" class="hover:text-white underline decoration-emerald-500 underline-offset-2">Mathematics</button> • 
-                <button onclick="filterCat('General Literature')" class="hover:text-white underline decoration-emerald-500 underline-offset-2">Literature</button>
+            <!-- Category Pills Bar -->
+            <div class="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                <span class="font-bold uppercase text-amber-300 text-[10px] tracking-wider mr-1">Categories:</span>
+                <button onclick="filterCat('')" class="cat-pill bg-white/20 hover:bg-emerald-600 text-white font-extrabold px-3 py-1 rounded-xl transition text-[11px]">All</button>
+                <button onclick="filterCat('Story Books')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Story Books</button>
+                <button onclick="filterCat('Mathematics')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Mathematics</button>
+                <button onclick="filterCat('Science')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Science</button>
+                <button onclick="filterCat('English')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">English</button>
+                <button onclick="filterCat('Social Studies')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Social Studies</button>
+                <button onclick="filterCat('Motivational')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Motivational</button>
+                <button onclick="filterCat('Magazines')" class="cat-pill bg-white/10 hover:bg-emerald-600 text-slate-200 hover:text-white font-bold px-3 py-1 rounded-xl transition text-[11px]">Magazines</button>
             </div>
         </div>
     </div>
@@ -49,28 +54,33 @@
     <!-- Catalog Grid -->
     <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {% for b in books %}
-        <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition group">
+        <div class="book-card bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition group" data-category="{{ b.category }}">
             <div>
-                <div class="relative overflow-hidden rounded-xl mb-3 bg-slate-100 h-48 border border-slate-200/60">
+                <div class="relative overflow-hidden rounded-xl mb-3 bg-slate-100 h-52 border border-slate-200/60">
                     <img src="{{ b.cover_url }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-300" alt="{{ b.title }}">
                     <span class="absolute top-2 left-2 text-[10px] bg-slate-900/90 text-emerald-300 backdrop-blur-md font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wider border border-slate-700/50">
                         {{ b.category }}
                     </span>
                 </div>
-                <h3 class="font-extrabold text-sm text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition">{{ b.title }}</h3>
-                <p class="text-xs text-slate-500 font-medium mb-1">By {{ b.author }}</p>
+                <h3 class="font-extrabold text-sm text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition" title="{{ b.title }}">{{ b.title }}</h3>
+                <p class="text-xs text-slate-500 font-medium mb-1 truncate">By {{ b.author }}</p>
                 {% if b.isbn %}
                 <p class="text-[11px] font-mono text-slate-400">ISBN: {{ b.isbn }}</p>
                 {% endif %}
             </div>
 
-            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <div class="text-[11px]">
-                    <span class="font-extrabold text-slate-800">{{ b.available_copies }} / {{ b.total_copies }}</span> <span class="text-slate-400 font-medium">Available</span>
+            <div class="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-extrabold text-emerald-700">{{ b.available_copies }} / {{ b.total_copies }} Hard Copies Available</span>
                 </div>
-                <button onclick="openBookModal({{ b.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3.5 py-1.5 rounded-xl shadow-sm transition">
-                    View & QR Token
-                </button>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="/read/{{ b.id }}" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-[11px] py-2 px-2 rounded-xl text-center shadow-sm transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-book-open-reader"></i> Read Softcopy
+                    </a>
+                    <button onclick="openBookModal({{ b.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] py-2 px-2 rounded-xl text-center shadow-sm transition flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-qrcode"></i> Reserve / QR
+                    </button>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -82,7 +92,7 @@
 <div id="book-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white max-w-xl w-full rounded-2xl p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto space-y-4">
         <div class="flex justify-between items-center pb-3 border-b border-slate-100">
-            <h3 id="modal-title" class="font-extrabold text-base text-slate-900">Book Details</h3>
+            <h3 id="modal-title" class="font-extrabold text-base text-slate-900">Book Details & Physical Reserve</h3>
             <button onclick="document.getElementById('book-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition">
                 <i class="fa-solid fa-xmark text-lg"></i>
             </button>
@@ -90,7 +100,7 @@
         <div id="modal-content" class="space-y-4 text-xs">
             <div class="text-center py-6 text-slate-500">
                 <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-600 block"></i>
-                Loading book copy QR tokens...
+                Loading book details...
             </div>
         </div>
     </div>
@@ -99,35 +109,59 @@
 
 {% block scripts %}
 <script>
+function filterCat(cat) {
+    const cards = document.querySelectorAll('.book-card');
+    cards.forEach(c => {
+        const itemCat = c.getAttribute('data-category') || '';
+        if (!cat || itemCat.toLowerCase().includes(cat.toLowerCase())) {
+            c.classList.remove('hidden');
+        } else {
+            c.classList.add('hidden');
+        }
+    });
+}
+
 async function performSearch(query) {
-    if (!query.trim()) return;
+    if (!query.trim()) {
+        filterCat('');
+        return;
+    }
     const grid = document.getElementById('catalog-grid');
-    grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block text-emerald-600"></i>AI NLP Scoring query...</div>';
+    grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-500"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block text-emerald-600"></i>AI NLP Searching books...</div>';
     
     try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         const data = await res.json();
         if (data.results && data.results.length > 0) {
             grid.innerHTML = data.results.map(b => `
-                <div class="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition group">
+                <div class="book-card bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition group">
                     <div>
-                        <div class="relative overflow-hidden rounded-xl mb-3 bg-slate-100 h-48 border border-slate-200/60">
+                        <div class="relative overflow-hidden rounded-xl mb-3 bg-slate-100 h-52 border border-slate-200/60">
                             <img src="${b.cover_url}" class="h-full w-full object-cover group-hover:scale-105 transition duration-300" alt="${b.title}">
                             <span class="absolute top-2 left-2 text-[10px] bg-amber-500 text-slate-950 font-extrabold px-2.5 py-0.5 rounded-lg uppercase tracking-wider shadow">
-                                Score: ${b.relevance_score}
+                                Score: ${b.relevance_score || 'AI Match'}
                             </span>
                         </div>
                         <h3 class="font-extrabold text-sm text-slate-900 line-clamp-1 group-hover:text-emerald-700 transition">${b.title}</h3>
                         <p class="text-xs text-slate-500 font-medium mb-1">By ${b.author}</p>
                     </div>
-                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <span class="text-[11px] font-extrabold text-emerald-700">${b.available_copies} Available</span>
-                        <button onclick="openBookModal(${b.id})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3.5 py-1.5 rounded-xl shadow-sm transition">View & QR</button>
+                    <div class="mt-4 pt-3 border-t border-slate-100 space-y-2">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-extrabold text-emerald-700">${b.available_copies} Hard Copies Available</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="/read/${b.id}" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold text-[11px] py-2 px-2 rounded-xl text-center shadow-sm transition flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-book-open-reader"></i> Read Softcopy
+                            </a>
+                            <button onclick="openBookModal(${b.id})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-[11px] py-2 px-2 rounded-xl text-center shadow-sm transition flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-qrcode"></i> Reserve / QR
+                            </button>
+                        </div>
                     </div>
                 </div>
             `).join('');
         } else {
-            grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400 font-medium">No matching books found for this NLP query.</div>';
+            grid.innerHTML = '<div class="col-span-full text-center py-12 text-slate-400 font-medium">No matching books found for this query.</div>';
         }
     } catch(e) {
         grid.innerHTML = '<div class="col-span-full text-center py-8 text-rose-500 font-medium">Error loading search results.</div>';
@@ -142,11 +176,6 @@ document.getElementById('nlp-search-input').addEventListener('keypress', (e) => 
     if (e.key === 'Enter') performSearch(e.target.value);
 });
 
-function filterCat(cat) {
-    document.getElementById('nlp-search-input').value = cat;
-    performSearch(cat);
-}
-
 async function openBookModal(id) {
     const modal = document.getElementById('book-modal');
     const content = document.getElementById('modal-content');
@@ -154,7 +183,7 @@ async function openBookModal(id) {
     content.innerHTML = `
         <div class="text-center py-6 text-slate-500">
             <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-emerald-600 block"></i>
-            Loading book details & QR tokens...
+            Loading book details & branch inventory...
         </div>
     `;
 
@@ -197,13 +226,21 @@ async function openBookModal(id) {
 
         content.innerHTML = `
             <div class="flex flex-col sm:flex-row gap-4">
-                <img src="${b.cover_url || '/static/images/default_cover.jpg'}" class="h-40 w-28 object-cover rounded-xl border border-slate-200 shadow-sm shrink-0">
+                <img src="${b.cover_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300'}" class="h-40 w-28 object-cover rounded-xl border border-slate-200 shadow-sm shrink-0">
                 <div class="space-y-1.5 text-xs text-slate-700">
                     <p class="font-bold text-sm text-slate-900">${b.title}</p>
                     <p><strong class="text-slate-900">Author:</strong> ${b.author}</p>
                     <p><strong class="text-slate-900">Category:</strong> <span class="bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md text-[10px]">${b.category}</span></p>
                     <p><strong class="text-slate-900">ISBN:</strong> <span class="font-mono text-slate-600">${b.isbn || 'N/A'}</span></p>
-                    <p><strong class="text-slate-900">Available:</strong> ${b.available_copies} / ${b.total_copies} copies</p>
+                    <p><strong class="text-slate-900">Physical Inventory:</strong> ${b.available_copies} / ${b.total_copies} available</p>
+                    <div class="pt-2 flex gap-2">
+                        <a href="/read/${b.id}" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-book-open-reader"></i> Read Softcopy
+                        </a>
+                        <button onclick="reserveDirect(${b.id})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow-sm">
+                            <i class="fa-solid fa-truck-ramp-box"></i> Reserve Hardcopy
+                        </button>
+                    </div>
                 </div>
             </div>
             <hr class="border-slate-100">
@@ -220,6 +257,17 @@ async function openBookModal(id) {
                 Unable to load QR details. Please check connection and try again.
             </div>
         `;
+    }
+}
+
+async function reserveDirect(bookId) {
+    try {
+        const res = await fetch(`/api/reservations/reserve/${bookId}`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error || "Reservation request complete.");
+        if (res.ok) window.location.href = "/dashboard/patron";
+    } catch(e) {
+        alert("Error requesting hardcopy reservation.");
     }
 }
 </script>

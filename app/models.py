@@ -90,6 +90,7 @@ class Book(Base):
     category = Column(String(100), default="General")
     cover_url = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
+    content_text = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     copies = relationship("BookCopy", back_populates="book", cascade="all, delete-orphan")

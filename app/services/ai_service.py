@@ -36,20 +36,26 @@ def search_books_db(db: Session, query: str):
     else:
         q_clean = f"%{q_str}%"
         books = db.query(Book).filter(
-            (Book.title.ilike(q_clean)) | (Book.author.ilike(q_clean)) | (Book.category.ilike(q_clean))
-        ).limit(5).all()
+            (Book.title.ilike(q_clean)) | 
+            (Book.author.ilike(q_clean)) | 
+            (Book.category.ilike(q_clean)) |
+            (Book.description.ilike(q_clean)) |
+            (Book.content_text.ilike(q_clean))
+        ).limit(6).all()
         if not books:
-            # Fallback to general list if specific search yielded no results
             books = db.query(Book).limit(6).all()
 
     res = []
     for b in books:
         avail = db.query(BookCopy).filter(BookCopy.book_id == b.id, BookCopy.status == "available").count()
+        softcopy_excerpt = (b.content_text[:350] + "...") if b.content_text else (b.description or "Softcopy edition available in digital archives.")
         res.append({
+            "book_id": b.id,
             "title": b.title,
             "author": b.author,
             "category": b.category,
-            "available_copies": avail
+            "available_copies": avail,
+            "softcopy_content_excerpt": softcopy_excerpt
         })
     return res
 
