@@ -68,27 +68,70 @@
             </div>
         </div>
 
-        <!-- Full Book Content -->
-        <div id="book-content-body" class="whitespace-pre-line leading-loose text-base font-serif text-slate-800 pt-2">
-            {% if book.content_text %}
-            {{ book.content_text }}
-            {% else %}
-            CHAPTER 1: Introduction & Preface
+        <!-- Chapter & Page Navigation Toolbar -->
+        <div class="bg-slate-100 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 font-sans text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="font-extrabold text-slate-700">Chapter:</span>
+                <select id="chapter-select" onchange="jumpToChapter(this.value)" class="p-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500">
+                    <option value="0">Loading chapters...</option>
+                </select>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <button onclick="prevPage()" id="prev-page-btn" class="px-3 py-1.5 bg-white hover:bg-slate-200 border border-slate-300 text-slate-800 font-extrabold rounded-lg shadow-sm transition disabled:opacity-50">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Prev
+                </button>
+                <div class="flex items-center bg-white px-2 py-1 rounded-lg border border-slate-200 space-x-1 font-mono font-bold text-slate-700">
+                    <span>Page</span>
+                    <input type="number" id="page-num-input" min="1" value="1" onchange="jumpToPageInput(this.value)" class="w-10 text-center font-mono font-bold text-slate-900 border border-slate-300 rounded px-1 py-0.5 text-xs focus:ring-1 focus:ring-emerald-500">
+                    <span id="page-total-label">of 10</span>
+                </div>
+                <button onclick="nextPage()" id="next-page-btn" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-lg shadow-sm transition disabled:opacity-50">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+        </div>
 
-            Welcome to the softcopy digital edition of '{{ book.title }}' by {{ book.author }}.
-            This work is preserved in the Effutu Municipal Library Network softcopy archives.
+        <!-- Hidden Raw Text Source -->
+        <div id="raw-book-text" class="hidden">{% if book.content_text %}{{ book.content_text }}{% else %}CHAPTER 1: Introduction to {{ book.title }}
+Author: {{ book.author }}
 
-            SECTION 1: Core Principles & Synopsis
-            This textbook/volume contains essential study material, diagrams, chapter summaries, and references tailored for Ghanaian students, educators, and general readers across the Central Region.
+Welcome to the digital softcopy edition of '{{ book.title }}'.
+This book is preserved in the Effutu Municipal Library Network softcopy archives.
 
-            You can read all chapters directly in this non-downloadable softcopy viewer or click 'Reserve Hard Copy' above to collect the physical book copy at your branch desk.
-            {% endif %}
+CHAPTER 2: Fundamental Principles
+Core concepts, formulas, and references for Ghanaian students and researchers.
+
+CHAPTER 3: Advanced Applications
+Case studies and practical exercises.
+
+CHAPTER 4: Summary & Glossary
+Self-assessment questions and glossary of terms.{% endif %}</div>
+
+        <!-- Rendered Active Book Page Content -->
+        <div id="book-content-body" class="whitespace-pre-line leading-loose text-base font-serif text-slate-800 pt-2 min-h-[350px]">
+        </div>
+
+        <!-- Reading Progress Bar -->
+        <div class="space-y-1 pt-4">
+            <div class="flex justify-between text-[11px] text-slate-500 font-sans font-bold">
+                <span id="reading-progress-text">Reading Progress: 25%</span>
+                <span id="page-indicator-bottom">Page 1 of 4</span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                <div id="reading-progress-bar" class="bg-emerald-600 h-2 rounded-full transition-all duration-300" style="width: 25%"></div>
+            </div>
         </div>
 
         <!-- Bottom Action Bar -->
-        <div class="pt-8 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 font-sans text-xs">
-            <div class="text-slate-500 font-medium">
-                Effutu Municipal Library Network • Digital Softcopy Archives
+        <div class="pt-6 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4 font-sans text-xs">
+            <div class="flex items-center space-x-2">
+                <button onclick="prevPage()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Prev
+                </button>
+                <button onclick="nextPage()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl transition">
+                    Next <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
             </div>
             <button onclick="reservePhysicalHardcopy({{ book.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold px-5 py-2.5 rounded-xl shadow transition flex items-center gap-2">
                 <i class="fa-solid fa-book-bookmark"></i> Pick Up Physical Hard Copy at Branch
@@ -122,6 +165,106 @@
 
 {% block scripts %}
 <script>
+let currentPage = 0;
+let bookPages = [];
+
+const officialTotalPages = parseInt("{{ book.pages or 250 }}");
+
+function parseBookPages() {
+    const rawText = document.getElementById('raw-book-text').innerText.trim();
+    const chapterSplits = rawText.split(/(?=(?:CHAPTER|ACT|SECTION|LESSON|UNIT|COLLECTION)\s+\d+)/i).map(ch => ch.trim()).filter(ch => ch.length > 0);
+
+    bookPages = [];
+    const pagesPerChapter = Math.max(1, Math.floor(officialTotalPages / (chapterSplits.length || 1)));
+
+    chapterSplits.forEach((chText, chIdx) => {
+        const lines = chText.split('\n');
+        const header = lines[0] || `CHAPTER ${chIdx + 1}`;
+        const bodyLines = lines.slice(1).join('\n');
+
+        // Divide chapter body evenly across allocated pages for this chapter
+        const chunkSize = Math.max(120, Math.ceil(bodyLines.length / pagesPerChapter));
+
+        for (let p = 0; p < pagesPerChapter; p++) {
+            const pageNum = bookPages.length + 1;
+            if (pageNum > officialTotalPages) break;
+
+            const startIdx = p * chunkSize;
+            const endIdx = (p === pagesPerChapter - 1) ? bodyLines.length : (p + 1) * chunkSize;
+            const pageSnippet = bodyLines.substring(startIdx, endIdx).trim();
+
+            const formattedPage = `${header}  (Page ${pageNum} of ${officialTotalPages})\n` +
+                `--------------------------------------------------------------------------------\n\n` +
+                (pageSnippet || `${header} — Continued study material, diagrams, and notes for Page ${pageNum}.`);
+
+            bookPages.push(formattedPage);
+        }
+    });
+
+    // Fill remaining pages up to official total author page count if any gap remains
+    while (bookPages.length < officialTotalPages) {
+        const pageNum = bookPages.length + 1;
+        const lastCh = chapterSplits[(pageNum - 1) % chapterSplits.length] || `SECTION ${pageNum}`;
+        const firstLine = lastCh.split('\n')[0];
+        bookPages.push(
+            `${firstLine}  (Page ${pageNum} of ${officialTotalPages})\n` +
+            `--------------------------------------------------------------------------------\n\n` +
+            `Official Page ${pageNum} of '${document.title.replace('- Effutu Municipal Library Network', '').trim()}'.\n` +
+            `Continuing reference text, exercises, and study notes for Chapter ${Math.floor(pageNum / pagesPerChapter) + 1}.`
+        );
+    }
+
+    // Update Chapter Selector options
+    const select = document.getElementById('chapter-select');
+    select.innerHTML = chapterSplits.map((ch, idx) => {
+        const titleLine = ch.split('\n')[0].substring(0, 32);
+        const targetPageIdx = Math.min(idx * pagesPerChapter, bookPages.length - 1);
+        return `<option value="${targetPageIdx}">${titleLine} (p. ${targetPageIdx + 1})</option>`;
+    }).join('');
+
+    document.getElementById('page-total-label').textContent = `of ${officialTotalPages}`;
+    renderPage(0);
+}
+
+function renderPage(pageIdx) {
+    if (pageIdx < 0 || pageIdx >= bookPages.length) return;
+    currentPage = pageIdx;
+
+    document.getElementById('book-content-body').innerText = bookPages[currentPage];
+    document.getElementById('page-num-input').value = currentPage + 1;
+    document.getElementById('page-total-label').textContent = `of ${officialTotalPages}`;
+    document.getElementById('page-indicator-bottom').textContent = `Page ${currentPage + 1} of ${officialTotalPages}`;
+
+    const progressPct = Math.round(((currentPage + 1) / officialTotalPages) * 100);
+    document.getElementById('reading-progress-text').textContent = `Reading Progress: ${progressPct}%`;
+    document.getElementById('reading-progress-bar').style.width = `${progressPct}%`;
+
+    document.getElementById('prev-page-btn').disabled = (currentPage === 0);
+    document.getElementById('next-page-btn').disabled = (currentPage === bookPages.length - 1);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevPage() {
+    if (currentPage > 0) renderPage(currentPage - 1);
+}
+
+function nextPage() {
+    if (currentPage < bookPages.length - 1) renderPage(currentPage + 1);
+}
+
+function jumpToChapter(targetPageIdx) {
+    renderPage(parseInt(targetPageIdx));
+}
+
+function jumpToPageInput(val) {
+    let p = parseInt(val) - 1;
+    if (isNaN(p)) p = 0;
+    if (p < 0) p = 0;
+    if (p >= bookPages.length) p = bookPages.length - 1;
+    renderPage(p);
+}
+
 let currentFontSize = 16;
 function changeFontSize(delta) {
     currentFontSize = Math.min(Math.max(12, currentFontSize + delta), 24);
@@ -179,5 +322,8 @@ async function confirmHardcopyBorrow(bookId) {
         msgDiv.textContent = "Error initiating physical borrow";
     }
 }
+
+// Initialize Book Pagination on page load
+window.addEventListener('DOMContentLoaded', parseBookPages);
 </script>
 {% endblock %}

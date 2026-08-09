@@ -7,12 +7,22 @@ from app.services.qr_service import generate_qr_token
 
 def seed_database():
     Base.metadata.create_all(bind=engine)
+    
+    # Always ensure 50+ books and unabridged manuscripts are seeded
+    try:
+        from seed_50_books import seed_50_books
+        from seed_verbatim_full_books import populate_verbatim_books
+        seed_50_books()
+        populate_verbatim_books()
+    except Exception as ex_b:
+        print(f"[SEED 50 BOOKS WARNING] {ex_b}")
+
     db = SessionLocal()
 
     try:
-        # Check if already seeded
-        if db.query(Branch).count() > 0:
-            print("[SEED] Database already populated with seed data.")
+        # Check if users already seeded
+        if db.query(User).count() > 0:
+            print("[SEED] Role users already initialized.")
             return
 
         print("[SEED] Starting database initialization for Effutu Municipal Library Network...")

@@ -315,7 +315,19 @@ def role_dashboard(role: str, request: Request, db: Session = Depends(get_db)):
 @app.get("/catalog", response_class=HTMLResponse)
 def catalog_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_optional(request, db)
-    books = db.query(Book).all()
+    books = db.query(Book).order_by(Book.id.desc()).all()
+
+    # Auto-heal: Ensure 58 books and softcopies are loaded
+    if len(books) < 50:
+        try:
+            from seed_50_books import seed_50_books
+            from expand_book_chapters import expand_all_books
+            seed_50_books()
+            expand_all_books()
+            books = db.query(Book).order_by(Book.id.desc()).all()
+        except Exception as ex:
+            print(f"[CATALOG AUTO-HEAL WARNING] {ex}")
+
     books_data = []
     for b in books:
         avail = db.query(BookCopy).filter(BookCopy.book_id == b.id, BookCopy.status == "available").count()
