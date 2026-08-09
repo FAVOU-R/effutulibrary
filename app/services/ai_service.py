@@ -25,13 +25,23 @@ def get_live_stats(db: Session):
         return {"total_books": 0, "available_books": 0, "overdue_count": 0}
 
 def search_books_db(db: Session, query: str):
-    if not db or not query:
+    if not db:
         return []
-    q_clean = f"%{query.lower().strip()}%"
-    books = db.query(Book).filter(
-        (Book.title.ilike(q_clean)) | (Book.author.ilike(q_clean)) | (Book.category.ilike(q_clean))
-    ).limit(5).all()
-    
+    q_str = (query or "").lower().strip()
+    general_queries = ["all", "available", "books", "catalog", "list", "show", "what books", "recommend", "inventory", "do you have"]
+    is_general = any(g in q_str for g in general_queries) or len(q_str) < 3
+
+    if is_general or not q_str:
+        books = db.query(Book).limit(8).all()
+    else:
+        q_clean = f"%{q_str}%"
+        books = db.query(Book).filter(
+            (Book.title.ilike(q_clean)) | (Book.author.ilike(q_clean)) | (Book.category.ilike(q_clean))
+        ).limit(5).all()
+        if not books:
+            # Fallback to general list if specific search yielded no results
+            books = db.query(Book).limit(6).all()
+
     res = []
     for b in books:
         avail = db.query(BookCopy).filter(BookCopy.book_id == b.id, BookCopy.status == "available").count()
@@ -169,7 +179,7 @@ def get_user_by_ghana_card_db(db: Session, card_number: str, current_user: User 
     return {"error": "Unauthorized access."}
 
 def web_search_online(query: str):
-    """Perform live real-time internet search using Multi-Engine Fallback (Google News RSS, DuckDuckGo Lite, Wikipedia, DDG API)"""
+    """Perform live real-time internet search using Multi-Engine Fallback (DuckDuckGo Lite, Google News RSS, Wikipedia, DDG API)"""
     if not query:
         return [{"snippet": "Query cannot be empty"}]
     
@@ -177,7 +187,25 @@ def web_search_online(query: str):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
     results = []
 
-    # 1. Try Google News RSS Feed (Best for live real-time breaking news, WASSCE timetables, current events)
+    # 1. Try DuckDuckGo Lite (Best for factual answers, current leaders, general knowledge, sports & news)
+    try:
+        url = "https://lite.duckduckgo.com/lite/"
+        data = urllib.parse.urlencode({'q': query}).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            
+        snippets = re.findall(r'result-snippet[^>]*>(.*?)</td>', html, re.DOTALL)
+        for s in snippets[:4]:
+            clean_text = re.sub(r'<[^>]+>', '', s).strip()
+            if clean_text:
+                results.append({"snippet": clean_text})
+        if results:
+            return results
+    except Exception as e:
+        print(f"DuckDuckGo Lite search warning: {e}")
+
+    # 2. Try Google News RSS Feed (Best for breaking news, WASSCE timetables, current events)
     try:
         url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}"
         req = urllib.request.Request(url, headers=headers)
@@ -196,24 +224,6 @@ def web_search_online(query: str):
                 return results
     except Exception as e:
         print(f"Google News RSS search warning: {e}")
-
-    # 2. Try DuckDuckGo Lite (POST request)
-    try:
-        url = "https://lite.duckduckgo.com/lite/"
-        data = urllib.parse.urlencode({'q': query}).encode('utf-8')
-        req = urllib.request.Request(url, data=data, headers=headers)
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            html = resp.read().decode('utf-8', errors='ignore')
-            
-        snippets = re.findall(r'<td class="result-snippet"[^>]*>(.*?)</td>', html, re.DOTALL)
-        for s in snippets[:4]:
-            clean_text = re.sub(r'<[^>]+>', '', s).strip()
-            if clean_text:
-                results.append({"snippet": clean_text})
-        if results:
-            return results
-    except Exception as e:
-        print(f"DuckDuckGo Lite search warning: {e}")
 
     # 3. Try Wikipedia OpenSearch API
     try:
@@ -308,6 +318,50 @@ tools_schema = [
     }
 ]
 
+def get_user_reading_history(db: Session, current_user: User):
+    if not db or not current_user:
+        return {"recent_borrowed": [], "favorite_categories": [], "personalized_recommendations": []}
+    try:
+        txs = db.query(Transaction).filter(Transaction.patron_id == current_user.id).all()
+        borrowed_book_ids = set()
+        borrowed_titles = []
+        categories_count = {}
+
+        for tx in txs:
+            if tx.book_copy and tx.book_copy.book:
+                b = tx.book_copy.book
+                borrowed_book_ids.add(b.id)
+                borrowed_titles.append(b.title)
+                cat = (b.category or "General").title()
+                categories_count[cat] = categories_count.get(cat, 0) + 1
+
+        fav_cats = sorted(categories_count.keys(), key=lambda c: categories_count[c], reverse=True)[:3]
+
+        # Recommend available books in favorite categories that user hasn't borrowed yet
+        recs = []
+        if fav_cats:
+            rec_books = db.query(Book).filter(
+                Book.category.in_(fav_cats),
+                ~Book.id.in_(borrowed_book_ids) if borrowed_book_ids else True
+            ).limit(4).all()
+            for rb in rec_books:
+                recs.append({"title": rb.title, "author": rb.author, "category": rb.category})
+
+        # Fallback to general books if user has no specific category matches
+        if not recs:
+            general_books = db.query(Book).filter(~Book.id.in_(borrowed_book_ids) if borrowed_book_ids else True).limit(4).all()
+            for gb in general_books:
+                recs.append({"title": gb.title, "author": gb.author, "category": gb.category})
+
+        return {
+            "recent_borrowed": borrowed_titles[-5:],
+            "favorite_categories": fav_cats,
+            "personalized_recommendations": recs
+        }
+    except Exception as e:
+        print(f"Error fetching user reading history: {e}")
+        return {"recent_borrowed": [], "favorite_categories": [], "personalized_recommendations": []}
+
 def get_ai_response(message: str, db: Session = None, current_user: User = None) -> str:
     groq_key = os.getenv("GROQ_API_KEY")
     if not groq_key:
@@ -319,7 +373,11 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
 
     stats = get_live_stats(db)
     user_role = getattr(current_user, "role", "guest") if current_user else "guest"
-    user_name = getattr(current_user, "full_name", "Guest") if current_user else "Guest Patron"
+    full_name = getattr(current_user, "full_name", "") if current_user else ""
+    first_name = full_name.strip().split()[0] if full_name.strip() else "Patron"
+
+    # Fetch User's Live Reading History and Tailored Recommendations from DB
+    user_history = get_user_reading_history(db, current_user)
 
     # 1. LOCAL MUNICIPAL LIBRARY DATABASE SEARCH (PRIMARY SOURCE)
     catalog_context = ""
@@ -359,8 +417,11 @@ Akwaaba is your standard Ghanaian greeting!
 
 CURRENT SYSTEM DATE & TIME: {now_str}
 
+GREETING RULE:
+- ALWAYS address the user by their FIRST NAME ONLY (e.g. "Akwaaba, {first_name}!"). NEVER use their full name (do NOT say "Akwaaba, {full_name}").
+
 DATA SOURCES & SEARCH PRIORITY:
-1. LOCAL MUNICIPAL LIBRARY DATABASE (PRIMARY SOURCE):
+1. LOCAL MUNICIPAL LIBRARY DATABASE (PRIMARY SOURCE - REAL-TIME LIVE DB SYNC):
 {catalog_context or "   - No direct title/category match found in local catalog DB for this exact query term."}
    - RULE: ALWAYS check and prioritize local library database results above when patrons ask for books, study materials, or library inventory.
 
@@ -368,13 +429,25 @@ DATA SOURCES & SEARCH PRIORITY:
 {live_web_context or "   - No external web search needed/performed."}
    - RULE: Use real-time web search results for questions about current world leaders (e.g. US President, Ghana President), breaking news, weather, or WAEC timetables.
 
-STRICT RESPONSE STYLE RULES:
-1. BE DIRECT & CONCISE: Provide clear, direct, and authoritative answers in 1 to 3 sentences maximum.
-2. ABSOLUTELY NO META-COMMENTARY: NEVER use phrases like "Based on the live real-time internet search results...", "It appears that...", "This is not explicitly confirmed...", "I would recommend checking latest news sources...", or dumping system timestamps.
-3. NO UNCERTAIN HEDGING: State facts directly and confidently without waffling or disclaimers.
-4. WARM & HELPFUL: Keep responses clean, sharp, and helpful with a friendly Ghanaian Akwaaba tone.
+USER READING HISTORY & PERSONALIZED RECOMMENDATIONS (LIVE FROM DB):
+- Books previously borrowed by {first_name}: {user_history['recent_borrowed'] or 'No past loans recorded yet'}
+- Favorite Reading Categories: {user_history['favorite_categories'] or 'General'}
+- Tailored Book Recommendations for {first_name}: {json.dumps(user_history['personalized_recommendations'])}
 
-Active Session User: {user_name} (Role: {user_role})
+RECOMMENDATION RULE:
+- When {first_name} asks for book recommendations or browsing suggestions, suggest books based on their tailored recommendations and favorite reading categories listed above.
+
+STRICT RESPONSE STYLE RULES:
+1. REAL-TIME FACTUAL ACCURACY & ZERO OUTDATED HALLUCINATIONS:
+   - YOUR PRE-TRAINED INTERNAL MEMORY IS OUTDATED regarding political leaders, government officials, sports, current events, and news.
+   - ALWAYS extract the answer directly from the LIVE REAL-TIME INTERNET SEARCH RESULTS provided above.
+   - If asked about the current US President, state clearly: "Donald Trump is the current President of the United States." NEVER state Joe Biden is President or invent health gossip.
+2. BE DIRECT & CONCISE: Provide clear, direct, and authoritative answers in 1 to 3 sentences maximum.
+3. ABSOLUTELY NO META-COMMENTARY: NEVER use phrases like "Based on the live real-time internet search results...", "It appears that...", "This is not explicitly confirmed...", "I would recommend checking latest news sources...", or dumping system timestamps.
+4. NO UNCERTAIN HEDGING: State facts directly and confidently without waffling or disclaimers.
+5. WARM & HELPFUL: Keep responses clean, sharp, and helpful with a friendly Ghanaian Akwaaba tone.
+
+Active Session User: {first_name} (Full Name: {full_name or 'Guest'}, Role: {user_role})
 
 LIVE CATALOG STATS:
 - Total books cataloged in DB: {stats['total_books']}
