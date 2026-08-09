@@ -131,17 +131,21 @@ async def list_users(
 
             <!-- Filters & Search -->
             <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-                <form method="get" action="/librarian/users" class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <input type="text" name="q" value="{q}" placeholder="Search name, phone, ID..." class="px-3 py-1.5 border border-slate-300 rounded text-xs focus:ring-2 focus:ring-emerald-500 w-64">
+                <form method="get" action="/librarian/users" id="userSearchForm" class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <div class="relative w-full sm:w-80">
+                        <input type="search" id="userSearchInput" name="q" value="{q}" placeholder="Search name, phone, ID, email..." class="w-full pl-9 pr-8 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
                     
-                    <select name="v_filter" onchange="this.form.submit()" class="px-3 py-1.5 border border-slate-300 rounded text-xs bg-white font-bold text-slate-700">
+                    <select name="v_filter" onchange="this.form.submit()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-bold text-slate-700 shadow-sm cursor-pointer">
                         <option value="all" {'selected' if v_filter == 'all' else ''}>All Verifications</option>
                         <option value="pending" {'selected' if v_filter == 'pending' else ''}>⏳ Pending (Yellow)</option>
                         <option value="verified" {'selected' if v_filter == 'verified' else ''}>✅ Verified (Green)</option>
                         <option value="rejected" {'selected' if v_filter == 'rejected' else ''}>❌ Rejected (Red)</option>
                     </select>
 
-                    <button type="submit" class="px-3 py-1.5 bg-slate-800 text-white font-bold text-xs rounded">Filter</button>
+                    <button type="submit" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg shadow-sm transition">Filter</button>
+                    {f'<a href="/librarian/users" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition">Clear Filter</a>' if q or v_filter != 'all' else ''}
                 </form>
             </div>
 
@@ -194,18 +198,19 @@ async def list_users(
             document.getElementById('rejectModal').classList.add('hidden');
         }}
 
-        // Inline Table Paginator for Standalone Page
+        // Responsive Paginator & Live Search Helper
         document.addEventListener('DOMContentLoaded', function() {{
             const tableEl = document.querySelector('table.paginated-table');
             if (!tableEl) return;
             const tbody = tableEl.querySelector('tbody');
             if (!tbody) return;
 
-            const rows = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('no-paginate'));
-            if (rows.length === 0) return;
+            const allRows = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('no-paginate'));
+            let activeRows = [...allRows];
+            if (allRows.length === 0) return;
 
             let currentPage = 1;
-            let pageSize = 5;
+            let pageSize = 10; // Default 10 records per page
 
             const headerBar = document.createElement('div');
             headerBar.className = "flex flex-col sm:flex-row justify-between items-center gap-3 p-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-600 rounded-t-xl";
@@ -214,8 +219,8 @@ async def list_users(
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-slate-700">Show</span>
                     <select class="page-size-select bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-emerald-800 focus:outline-none focus:border-emerald-600 shadow-sm cursor-pointer">
-                        <option value="5" selected>5</option>
-                        <option value="10">10</option>
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
                         <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
@@ -224,7 +229,7 @@ async def list_users(
                     <span class="text-slate-600">entries per page</span>
                 </div>
                 <div class="page-info-text text-slate-500 font-mono text-[11px]">
-                    Showing <span class="start-idx font-bold text-slate-800">1</span> to <span class="end-idx font-bold text-slate-800">5</span> of <span class="total-idx font-bold text-slate-800">${{rows.length}}</span> entries
+                    Showing <span class="start-idx font-bold text-slate-800">1</span> to <span class="end-idx font-bold text-slate-800">10</span> of <span class="total-idx font-bold text-slate-800">${{activeRows.length}}</span> entries
                 </div>
                 <div class="pagination-controls flex items-center gap-1">
                     <button type="button" class="btn-prev px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition">
@@ -240,15 +245,19 @@ async def list_users(
             tableEl.parentNode.insertBefore(headerBar, tableEl);
 
             function renderPage() {{
-                let actualSize = (pageSize === 'all') ? rows.length : parseInt(pageSize);
-                let totalPages = Math.ceil(rows.length / actualSize) || 1;
+                let actualSize = (pageSize === 'all') ? activeRows.length : parseInt(pageSize);
+                let totalPages = Math.ceil(activeRows.length / actualSize) || 1;
                 if (currentPage > totalPages) currentPage = totalPages;
                 if (currentPage < 1) currentPage = 1;
 
                 let start = (currentPage - 1) * actualSize;
-                let end = (pageSize === 'all') ? rows.length : Math.min(start + actualSize, rows.length);
+                let end = (pageSize === 'all') ? activeRows.length : Math.min(start + actualSize, activeRows.length);
 
-                rows.forEach((row, idx) => {{
+                allRows.forEach(row => {{
+                    row.style.display = 'none';
+                }});
+
+                activeRows.forEach((row, idx) => {{
                     if (idx >= start && idx < end) {{
                         row.style.display = '';
                     }} else {{
@@ -256,13 +265,34 @@ async def list_users(
                     }}
                 }});
 
-                headerBar.querySelector('.start-idx').textContent = rows.length > 0 ? (start + 1) : 0;
+                headerBar.querySelector('.start-idx').textContent = activeRows.length > 0 ? (start + 1) : 0;
                 headerBar.querySelector('.end-idx').textContent = end;
-                headerBar.querySelector('.total-idx').textContent = rows.length;
+                headerBar.querySelector('.total-idx').textContent = activeRows.length;
                 headerBar.querySelector('.page-num-display').textContent = `${{currentPage}} / ${{totalPages}}`;
 
                 headerBar.querySelector('.btn-prev').disabled = (currentPage === 1);
                 headerBar.querySelector('.btn-next').disabled = (currentPage === totalPages || totalPages === 0);
+            }}
+
+            // Instant Live Search + Reset to Page 1 on Change or Clear
+            const searchInput = document.getElementById('userSearchInput');
+            if (searchInput) {{
+                searchInput.addEventListener('input', function() {{
+                    const term = this.value.toLowerCase().trim();
+                    activeRows = allRows.filter(row => {{
+                        const text = row.innerText.toLowerCase();
+                        return !term || text.includes(term);
+                    }});
+                    currentPage = 1; // Always reset to first page when search changes or is cleared
+                    renderPage();
+                }});
+                
+                // Clear button event listener
+                searchInput.addEventListener('search', function() {{
+                    activeRows = [...allRows];
+                    currentPage = 1;
+                    renderPage();
+                }});
             }}
 
             headerBar.querySelector('.page-size-select').addEventListener('change', (e) => {{
@@ -279,8 +309,8 @@ async def list_users(
             }});
 
             headerBar.querySelector('.btn-next').addEventListener('click', () => {{
-                let actualSize = (pageSize === 'all') ? rows.length : parseInt(pageSize);
-                let totalPages = Math.ceil(rows.length / actualSize);
+                let actualSize = (pageSize === 'all') ? activeRows.length : parseInt(pageSize);
+                let totalPages = Math.ceil(activeRows.length / actualSize);
                 if (currentPage < totalPages) {{
                     currentPage++;
                     renderPage();
