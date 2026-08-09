@@ -343,48 +343,86 @@ async def list_users(
     """)
 
 @router.get("/users/add", response_class=HTMLResponse)
-async def add_user_page(current_user: User = Depends(require_librarian)):
-    return HTMLResponse("""
+async def add_user_page(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Branch
+    branches = db.query(Branch).filter(Branch.status == "active").order_by(Branch.id.asc()).all()
+    if not branches:
+        branches = db.query(Branch).all()
+
+    user_branch_id = current_user.branch_id or 1
+    branch_options = "".join([
+        f'<option value="{b.id}" {"selected" if b.id == user_branch_id else ""}>{b.name} ({b.location})</option>'
+        for b in branches
+    ])
+
+    user_branch_name = current_user.branch.name if current_user.branch else "Abasraba Main HQ Library"
+
+    branch_field = f"""
+    <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assigned Library Branch *</label>
+        <select name="branch_id" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white font-bold text-slate-800 focus:border-emerald-600 focus:outline-none shadow-sm">
+            {branch_options}
+        </select>
+    </div>
+    """ if current_user.role in ['sys_admin', 'hq_admin', 'admin'] else f"""
+    <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Assigned Library Branch</label>
+        <input type="hidden" name="branch_id" value="{user_branch_id}">
+        <input type="text" value="{user_branch_name}" disabled class="w-full text-sm bg-slate-100 font-bold border border-slate-300 rounded-lg p-2.5 text-slate-800">
+    </div>
+    """
+
+    return HTMLResponse(f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <script src="https://cdn.tailwindcss.com"></script>
-        <title>Manually Add User - Effutu Library</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <title>Manually Enroll User - Effutu Library System</title>
     </head>
     <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
-        <div class="max-w-md w-full bg-white border border-slate-200 rounded-xl shadow-lg p-6 space-y-4">
-            <h2 class="text-2xl font-extrabold text-slate-800 text-center">Manually Enroll User</h2>
-            <form method="post" action="/librarian/users/add" class="space-y-3">
+        <div class="max-w-md w-full bg-white border border-slate-200 rounded-2xl shadow-xl p-6 space-y-4">
+            <div class="text-center">
+                <i class="fa-solid fa-user-plus text-3xl text-emerald-600 mb-2"></i>
+                <h2 class="text-2xl font-extrabold text-slate-900">Manually Enroll User</h2>
+                <p class="text-xs text-slate-500 font-medium mt-0.5">Register walk-in patrons & branch staff</p>
+            </div>
+            <form method="post" action="/librarian/users/add" class="space-y-3.5">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
-                    <input name="full_name" placeholder="Full Name" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name *</label>
+                    <input name="full_name" placeholder="e.g. Kwame Mensah" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
-                    <input name="email" type="email" placeholder="Email" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address *</label>
+                    <input name="email" type="email" placeholder="user@gmail.com" required class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Ghana Card (Optional)</label>
-                    <input name="ghana_card_number" placeholder="GHA-123456789-1" pattern="GHA-[0-9]{9}-[0-9]{1}" class="w-full text-sm font-mono border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none uppercase">
+                    <input name="ghana_card_number" placeholder="GHA-123456789-1" pattern="GHA-[0-9]{{9}}-[0-9]{{1}}" class="w-full text-sm font-mono border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none uppercase">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Role</label>
-                    <select name="role" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
-                        <option value="patron">Patron</option>
-                        <option value="librarian">Librarian</option>
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Role *</label>
+                    {f'''
+                    <select name="role" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-white font-bold text-slate-800 focus:border-emerald-600 focus:outline-none shadow-sm">
+                        <option value="patron">Patron / Student (Standard Member)</option>
+                        <option value="librarian">Branch Librarian</option>
                     </select>
+                    ''' if current_user.role in ['sys_admin', 'hq_admin', 'admin'] else '''
+                    <input type="hidden" name="role" value="patron">
+                    <input type="text" value="Patron / Student (Standard Member)" disabled class="w-full text-sm bg-slate-100 font-bold border border-slate-300 rounded-lg p-2.5 text-slate-800">
+                    '''}
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Branch ID</label>
-                    <input name="branch_id" type="number" value="1" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
-                </div>
-                <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg shadow transition">
-                    Enroll User & Send Email
+                {branch_field}
+                <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-sm rounded-xl shadow transition">
+                    <i class="fa-solid fa-paper-plane mr-1"></i> Enroll User & Dispatch Credentials
                 </button>
             </form>
             <div class="text-center pt-2">
-                <a href="/librarian/users" class="text-xs text-slate-600 hover:underline">← Back to User List</a>
+                <a href="/librarian/users" class="text-xs font-bold text-slate-600 hover:text-emerald-700 transition">← Back to User Management Desk</a>
             </div>
         </div>
     </body>
@@ -402,6 +440,10 @@ async def add_user_post(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian)
 ):
+    if current_user.role == "librarian":
+        role = "patron"
+        branch_id = current_user.branch_id or branch_id
+
     email_clean = email.lower().strip()
     if db.query(User).filter(User.email == email_clean).first():
         return HTMLResponse("<h3>Email already exists</h3><a href='/librarian/users/add'>Back</a>", status_code=400)

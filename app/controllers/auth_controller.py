@@ -932,9 +932,7 @@ def reset_admin_credentials(
         creds = [
             ("hqadmin@effutulibrary.gov.gh", "hq_admin", "admin123", "GHA-000000002-2"),
             ("sysadmin@effutulibrary.gov.gh", "sys_admin", "admin123", "GHA-000000001-1"),
-            ("librarian@effutulibrary.gov.gh", "librarian", "admin123", "GHA-000000003-3"),
-            ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
-            ("librarian@effutu.edu.gh", "librarian", "Librarian@123", "GHA-000000001-0")
+            ("librarian@effutulibrary.gov.gh", "librarian", "admin123", "GHA-000000003-3")
         ]
         result = []
         for email, role, plain, gha in creds:
