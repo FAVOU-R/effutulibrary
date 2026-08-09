@@ -90,8 +90,11 @@ async def list_users(
                 </form>
                 {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px]">Verify</button></form>' if (u.verification_status != 'verified') else ''}
                 {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px] inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
-                <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline'>
-                    <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px]'>Reset Pwd</button>
+                <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
+                    <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-key'></i> Reset Pwd</button>
+                </form>
+                <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
+                    <button class='px-2 py-1 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-id-card'></i> Desk Reset</button>
                 </form>
                 <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
                     <button class='px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-trash'></i></button>
@@ -485,41 +488,105 @@ async def delete_user_account(
 
     return RedirectResponse(url="/librarian/users", status_code=303)
 
-@router.post("/users/{user_id}/reset-pwd", response_class=HTMLResponse)
+@router.post("/users/{user_id}/reset-pwd")
+@router.get("/users/{user_id}/reset-pwd")
 async def reset_pwd(
     request: Request,
     user_id: int,
+    mode: str = "auto",
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian)
 ):
     u = db.query(User).filter(User.id == user_id).first()
     if not u:
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse(status_code=404, content={"error": "User not found"})
         return HTMLResponse("<h3>User not found</h3>", status_code=404)
 
-    new_pwd = f"Effutu@{random.randint(1000, 9999)}"
-    u.hashed_password = get_password_hash(new_pwd)
+    try:
+        q_mode = request.query_params.get("mode")
+        if q_mode:
+            mode = q_mode
+    except Exception:
+        pass
+
+    has_email = bool(u.email and "@" in u.email)
+    show_in_person = (mode == "in_person") or (not has_email)
+
+    temp_pwd = f"Effutu@{random.randint(1000, 9999)}"
+    u.hashed_password = get_password_hash(temp_pwd)
     u.must_change_password = True
     db.commit()
 
     base_url = str(request.base_url).rstrip('/')
-    body = f"""
-    <p>Dear {u.full_name},</p>
-    <p>Your password was reset by your branch librarian.</p>
-    <p>New Default Password: <b>{new_pwd}</b><br>
-    Login: <a href='{base_url}/auth/login'>{base_url}/auth/login</a></p>
+    if has_email:
+        body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #047857;">Password Reset Notice</h2>
+            <p>Akwaaba <b>{u.full_name}</b>,</p>
+            <p>Your library account password has been reset by your branch librarian.</p>
+            <p><b>Temporary Password:</b> <code style="background-color: #f1f5f9; padding: 6px 12px; font-size: 16px; font-weight: bold; border-radius: 6px;">{temp_pwd}</code></p>
+            <div style="background-color: #fef3c7; padding: 12px; border-left: 4px solid #f59e0b; margin: 15px 0;">
+                <b>Mandatory Action:</b> You will be required to create a new custom password immediately upon your next sign in.
+            </div>
+            <p><a href="{base_url}/auth/login" style="display: inline-block; padding: 10px 20px; background-color: #047857; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Sign In to Effutu Library</a></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 11px; color: #64748b;">Effutu Municipal Library Network</p>
+        </div>
+        """
+        send_email(u.email, "Effutu Library - Temporary Password Dispatched", body)
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={
+            "message": f"Password reset successfully. Temp password: {temp_pwd if show_in_person else 'dispatched to email'}",
+            "temp_password": temp_pwd if show_in_person else None,
+            "must_change_password": True
+        })
+
+    in_person_block = f"""
+    <div class="p-4 bg-amber-50 border border-amber-300 rounded-xl space-y-2 text-center">
+        <p class="text-xs font-bold text-amber-900 uppercase tracking-wider"><i class="fa-solid fa-id-card text-amber-600 mr-1"></i> In-Person Physical Desk Temporary Password</p>
+        <div class="text-2xl font-mono font-black text-amber-950 tracking-widest bg-white py-2.5 px-4 rounded-lg border border-amber-200 inline-block shadow-sm">
+            {temp_pwd}
+        </div>
+        <p class="text-[11px] text-amber-800 font-medium leading-relaxed">
+            {'Patron has no registered email address. ' if not has_email else ''}Provide this temporary password directly to patron <b>{u.full_name}</b> at the desk. They will be forced to change it upon signing in.
+        </p>
+    </div>
+    """ if show_in_person else f"""
+    <p class="text-xs text-slate-600 leading-relaxed">
+        A temporary password has been dispatched directly to <b class="text-emerald-800">{u.email}</b>.
+    </p>
     """
-    send_email(u.email, "Effutu Library - Password Reset by Librarian", body)
 
     return HTMLResponse(f"""
     <!DOCTYPE html>
     <html lang="en">
-    <head><script src="https://cdn.tailwindcss.com"></script></head>
-    <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4">
-        <div class="max-w-md w-full bg-white border border-slate-200 rounded-xl p-6 text-center space-y-4 shadow-lg">
-            <h3 class="text-xl font-bold text-amber-700">Password Reset Completed</h3>
-            <p class="text-xs text-slate-600">New Default Password: <span class="bg-amber-100 font-mono font-bold px-2 py-1 rounded text-amber-900">{new_pwd}</span></p>
-            <p class="text-xs text-slate-500">Notice emailed to {u.email}.</p>
-            <a href="/librarian/users" class="inline-block py-2 px-4 bg-slate-700 text-white font-bold rounded text-xs">Back to Users Directory</a>
+    <head>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <title>Password Reset Confirmation - Librarian Desk</title>
+    </head>
+    <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
+        <div class="max-w-md w-full bg-white border border-slate-200 rounded-2xl p-6 text-center space-y-4 shadow-xl">
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 text-emerald-800 rounded-full mb-1">
+                <i class="fa-solid fa-key text-xl"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-slate-800">Password Reset Completed</h3>
+            
+            {in_person_block}
+
+            <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl text-left text-xs text-slate-700 space-y-1">
+                <p class="font-bold text-emerald-800"><i class="fa-solid fa-user-shield"></i> Forced Password Change Active</p>
+                <p class="text-[11px] text-slate-500 font-medium">Account requires a new custom password on first sign in after reset.</p>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                {'<a href="/librarian/users/' + str(u.id) + '/reset-pwd?mode=in_person" class="flex-1 py-2 px-3 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-xl text-xs border border-amber-300">Show Desk Temp Pwd</a>' if (has_email and not show_in_person) else ''}
+                <a href="/librarian/users" class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs shadow transition">
+                    Return to User Desk
+                </a>
+            </div>
         </div>
     </body>
     </html>

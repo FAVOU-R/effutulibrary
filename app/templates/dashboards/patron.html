@@ -237,23 +237,32 @@ function generateLibraryCard() {
 }
 
 document.addEventListener("DOMContentLoaded", async function() {
+    const container = document.getElementById('ai-recs-container');
+    if (!container) return;
+
     try {
-        const res = await fetch('/api/ai/recommend');
+        let res = await fetch('/ai/recommend');
+        if (!res.ok) res = await fetch('/api/ai/recommend');
+        
         const data = await res.json();
-        const container = document.getElementById('ai-recs-container');
         if (data.recommendations && data.recommendations.length > 0) {
             container.innerHTML = data.recommendations.map(r => `
-                <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center flex flex-col justify-between hover:shadow-md transition">
-                    <img src="${r.cover_url}" class="h-32 w-full object-cover rounded mb-2" alt="${r.title}">
-                    <div class="font-bold text-xs text-slate-800 line-clamp-1">${r.title}</div>
-                    <div class="text-[11px] text-slate-500 line-clamp-1 mb-1">${r.author}</div>
-                    <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded inline-block mb-2">${r.category}</span>
-                    <a href="/catalog" class="btn-effutu text-[10px] py-1 px-2 block w-full">View Details</a>
+                <div class="bg-slate-50 border border-slate-200/90 rounded-xl p-3.5 text-center flex flex-col justify-between hover:shadow-md transition">
+                    <img src="${r.cover_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=300'}" class="h-32 w-full object-cover rounded-lg mb-2.5 shadow-sm" alt="${r.title}">
+                    <div>
+                        <div class="font-extrabold text-xs text-slate-800 line-clamp-1">${r.title}</div>
+                        <div class="text-[11px] text-slate-500 line-clamp-1 mb-1 font-medium">${r.author}</div>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-md inline-block mb-2.5 uppercase">${r.category}</span>
+                    </div>
+                    <a href="/catalog" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] py-1.5 px-3 rounded-lg block w-full transition shadow-sm">View Catalog</a>
                 </div>
             `).join('');
+        } else {
+            container.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400 text-xs font-medium"><i class="fa-solid fa-book-open text-xl mb-1.5 block"></i>No recommendations generated yet. Explore our catalog!</div>`;
         }
     } catch(e) {
-        console.log(e);
+        console.error("AI Recommendation Fetch Error:", e);
+        container.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400 text-xs font-medium"><i class="fa-solid fa-circle-exclamation text-xl mb-1.5 text-amber-500 block"></i>Unable to load AI recommendations right now. Please refresh.</div>`;
     }
 });
 </script>

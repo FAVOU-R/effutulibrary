@@ -621,6 +621,23 @@ async def force_change_post(
     user.must_change_password = False
     db.commit()
 
+    if user.email:
+        email_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #047857;">Security Notice: Password Updated</h2>
+            <p>Akwaaba <b>{user.full_name}</b>,</p>
+            <p>This email confirms that the password for your Effutu Municipal Library Network account was updated successfully.</p>
+            <div style="background-color: #ecfdf5; padding: 12px; border-left: 4px solid #10b981; margin: 15px 0;">
+                <b>Member ID:</b> {user.member_id or user.email}<br>
+                <b>Security Status:</b> Password Update Completed Successfully
+            </div>
+            <p style="font-size: 12px; color: #b91c1c; font-weight: bold;">If you did NOT perform this change, please contact your branch librarian immediately to secure your account.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 11px; color: #64748b;">Effutu Municipal Library Network</p>
+        </div>
+        """
+        send_email(user.email, "🔒 Security Alert: Your Password Was Changed - Effutu Library", email_body)
+
     return RedirectResponse(url="/auth/login?msg=password_changed_login_again", status_code=303)
 
 @router.get("/forgot-password", response_class=HTMLResponse)
@@ -911,22 +928,21 @@ async def forgot_password_page():
                     body: JSON.stringify({ email: email })
                 });
                 const data = await res.json();
-                if (data.reset_link) {
-                    alertDiv.innerHTML = `
-                        <div class="space-y-2 text-left">
-                            <p class="text-xs font-semibold text-emerald-900"><i class="fa-solid fa-paper-plane text-emerald-600 mr-1"></i> Notice dispatched to <b>${email}</b>.</p>
-                            <div class="p-2.5 bg-emerald-100/70 border border-emerald-300 rounded-lg text-center">
-                                <a href="${data.reset_link}" class="inline-block w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded shadow transition">
-                                    🔑 Click Here to Reset Password Now
-                                </a>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    alertDiv.textContent = data.message || 'If an account exists, a reset link has been dispatched to your inbox!';
-                }
+                alertDiv.innerHTML = `
+                    <div class="p-3 text-center space-y-1">
+                        <i class="fa-solid fa-envelope-circle-check text-2xl text-emerald-600 mb-1 block"></i>
+                        <p class="text-xs font-bold text-slate-800">Check Your Inbox</p>
+                        <p class="text-[11px] text-slate-600 font-medium">${data.message || 'A secure password reset link has been sent to your registered email address. Please check your inbox.'}</p>
+                    </div>
+                `;
             } catch(ex) {
-                alertDiv.textContent = 'If an account exists, a reset link has been dispatched to your inbox!';
+                alertDiv.innerHTML = `
+                    <div class="p-3 text-center space-y-1">
+                        <i class="fa-solid fa-envelope-circle-check text-2xl text-emerald-600 mb-1 block"></i>
+                        <p class="text-xs font-bold text-slate-800">Check Your Inbox</p>
+                        <p class="text-[11px] text-slate-600 font-medium">A secure password reset link has been sent to your registered email address. Please check your inbox.</p>
+                    </div>
+                `;
             }
         });
         </script>
@@ -956,7 +972,8 @@ async def forgot_password_api(
     if not email:
         return JSONResponse(status_code=400, content={"error": "Email address is required."})
 
-    user = db.query(User).filter(User.email == email.lower().strip()).first()
+    email_clean = email.lower().strip()
+    user = db.query(User).filter(User.email == email_clean).first()
     if user:
         token = secrets.token_hex(16)
         expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=15)
@@ -974,22 +991,23 @@ async def forgot_password_api(
         reset_link = f"{frontend_url}/reset-password?token={token}"
 
         email_html = f"""
-        <p>Hi {user.full_name},</p>
-        <p>Click the link below to reset your password for your Effutu Library Network account:</p>
-        <p><a href='{reset_link}' style='display:inline-block; padding:10px 20px; background-color:#047857; color:#ffffff; font-weight:bold; text-decoration:none; border-radius:5px;'>Reset Password</a></p>
-        <p>Or copy this link into your browser:<br><code>{reset_link}</code></p>
-        <p><b>Note:</b> Link expires in 15 minutes.</p>
-        <p>If you did not request a password reset, please ignore this message.</p>
-        <p>Effutu Library Network</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #047857;">Password Reset Request</h2>
+            <p>Akwaaba <b>{user.full_name}</b>,</p>
+            <p>We received a request to reset the password for your Effutu Municipal Library Network account.</p>
+            <p style="margin: 20px 0;">
+                <a href='{reset_link}' style='display:inline-block; padding:12px 24px; background-color:#047857; color:#ffffff; font-weight:bold; text-decoration:none; border-radius:8px;'>Reset Password Now</a>
+            </p>
+            <p style="font-size: 12px; color: #64748b;">Or copy this link into your browser:<br><code style="background: #f1f5f9; padding: 4px; font-size: 11px;">{reset_link}</code></p>
+            <p style="font-size: 12px; color: #94a3b8; margin-top: 15px;"><b>Note:</b> This secure link expires in 15 minutes. If you did not request a password reset, please ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 11px; color: #64748b;">Effutu Municipal Library Network</p>
+        </div>
         """
 
-        send_email(user.email, "Reset Your Password - Effutu Library", email_html)
-        return JSONResponse(content={
-            "message": "If email exists, reset link sent. Please check your inbox.",
-            "reset_link": reset_link
-        })
+        send_email(user.email, "Reset Your Password - Effutu Library Network", email_html)
 
-    return JSONResponse(content={"message": "If email exists, reset link sent. Please check your inbox."})
+    return JSONResponse(content={"message": "If an account is registered with this email, a secure password reset link has been sent to your inbox. Please check your email."})
 
 @router.get("/reset-password", response_class=HTMLResponse)
 @router.get("/auth/reset-password", response_class=HTMLResponse)
@@ -1118,6 +1136,23 @@ async def reset_password_api(
     user.must_change_password = False
     pr.used = True
     db.commit()
+
+    if user.email:
+        email_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px;">
+            <h2 style="color: #047857;">Security Notice: Password Reset Completed</h2>
+            <p>Akwaaba <b>{user.full_name}</b>,</p>
+            <p>This email confirms that the password for your Effutu Municipal Library Network account was updated successfully.</p>
+            <div style="background-color: #ecfdf5; padding: 12px; border-left: 4px solid #10b981; margin: 15px 0;">
+                <b>Member ID:</b> {user.member_id or user.email}<br>
+                <b>Security Status:</b> Password Reset Completed
+            </div>
+            <p style="font-size: 12px; color: #b91c1c; font-weight: bold;">If you did NOT perform this password change, please contact your branch librarian immediately to secure your account.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 11px; color: #64748b;">Effutu Municipal Library Network</p>
+        </div>
+        """
+        send_email(user.email, "🔒 Security Alert: Your Password Was Changed - Effutu Library", email_body)
 
     return JSONResponse(content={"message": "Password updated successfully!"})
 

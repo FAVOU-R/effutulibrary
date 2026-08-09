@@ -18,10 +18,11 @@ def list_active_branches(db: Session = Depends(get_db)):
     return [{"id": b.id, "code": b.code, "name": b.name, "location": b.location} for b in branches]
 
 @router.post("")
+@router.post("/add")
 def add_branch(
     name: str = Form(...),
     location: str = Form(...),
-    code: str = Form(...),
+    code: str = Form(None),
     status: str = Form("active"),
     is_hq: bool = Form(False),
     db: Session = Depends(get_db),
@@ -30,11 +31,23 @@ def add_branch(
     if current_user.role not in ["sys_admin", "hq_admin"]:
         raise HTTPException(status_code=403, detail="Only System / HQ Admin can add new library branches")
     
-    new_br = Branch(code=code.upper(), name=name, location=location, status=status, is_hq=is_hq)
+    if not code or not code.strip():
+        count = db.query(Branch).count() + 1
+        generated_code = f"BR-EFF-{count:02d}"
+        while db.query(Branch).filter(Branch.code == generated_code).first():
+            count += 1
+            generated_code = f"BR-EFF-{count:02d}"
+        code = generated_code
+    else:
+        code = code.strip().upper()
+        if db.query(Branch).filter(Branch.code == code).first():
+            raise HTTPException(status_code=400, detail=f"Branch code '{code}' already exists")
+
+    new_br = Branch(code=code, name=name, location=location, status=status, is_hq=is_hq)
     db.add(new_br)
     db.commit()
     db.refresh(new_br)
-    return JSONResponse(content={"message": "Branch created successfully", "branch_id": new_br.id})
+    return JSONResponse(content={"message": f"Branch '{new_br.name}' created successfully with code {new_br.code}!", "branch_id": new_br.id, "code": new_br.code})
 
 @router.post("/{branch_id}/edit")
 @router.post("/edit/{branch_id}")

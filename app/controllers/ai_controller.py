@@ -33,6 +33,7 @@ def nlp_search(q: str = Query(..., min_length=1), db: Session = Depends(get_db))
     return JSONResponse(content={"query": q, "total_matches": len(results), "results": results})
 
 @router.get("/recommend")
+@router.get("/api/recommend")
 def get_recommendations(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_optional(request, db)
     user_id = user.id if user else 1

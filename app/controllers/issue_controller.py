@@ -49,6 +49,9 @@ def return_book(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    if current_user.role not in ["sys_admin", "hq_admin", "librarian"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
     copy = db.query(BookCopy).filter(BookCopy.copy_code == copy_code).first()
     if not copy or copy.status != "issued":
         raise HTTPException(status_code=400, detail="Invalid or unissued copy")

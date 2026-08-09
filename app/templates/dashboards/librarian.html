@@ -34,34 +34,36 @@
     <!-- 2 Column Section: Pending Approvals & Active Branch Loans -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        <!-- Pending Patron Registrations -->
+        <!-- Physical ID Verification Desk -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
             <div>
                 <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-user-clock text-amber-500 text-sm"></i>
-                    Pending Patron Approvals ({{ pending_users|length }})
+                    <i class="fa-solid fa-id-card text-emerald-600 text-sm"></i>
+                    Physical ID Verification Desk ({{ pending_users|length }})
                 </h3>
-                <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">Approving a patron generates a Member ID and triggers a Brevo notification email with login credentials.</p>
+                <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
+                    Online registration triggers an instant welcome email & Member ID. Inspect patron's physical Ghana Card, School ID, or Voters ID on first visit to verify account & grant full borrowing limit (up to 3 books).
+                </p>
             </div>
 
             <div class="space-y-3">
                 {% for u in pending_users %}
                 <div class="p-4 bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
                     <div class="space-y-0.5">
-                        <div class="font-bold text-slate-900 text-xs">{{ u.full_name }}</div>
+                        <div class="font-bold text-slate-900 text-xs">{{ u.full_name }} <span class="text-[10px] text-emerald-700 font-mono font-bold">({{ u.member_id }})</span></div>
                         <div class="text-[11px] text-slate-600 font-mono">
                             {{ u.id_type|upper if u.id_type else 'GHANA CARD' }}: {{ u.id_number or u.alt_contact or u.ghana_card_number or 'No Card Provided' }}
                         </div>
                         <div class="text-slate-400 text-[11px] font-medium">Contact: {{ u.phone or u.email }}</div>
                     </div>
                     <button onclick="approveUser({{ u.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl shadow-sm transition shrink-0">
-                        Verify & Approve
+                        <i class="fa-solid fa-user-check"></i> Verify Physical ID
                     </button>
                 </div>
                 {% else %}
                 <div class="text-center py-8 text-slate-400 text-xs font-medium">
                     <i class="fa-solid fa-circle-check text-2xl mb-2 text-slate-300 block"></i>
-                    No pending patron registrations for this branch
+                    No unverified patrons pending physical ID check for this branch
                 </div>
                 {% endfor %}
             </div>
