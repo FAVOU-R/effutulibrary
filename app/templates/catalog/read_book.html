@@ -228,7 +228,13 @@ function renderPage(pageIdx) {
     document.getElementById('next-page-btn').disabled = (currentPage === totalPages - 1);
     document.getElementById('chapter-select').value = currentPage;
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Smooth scroll to top of reading toolbar so no text is hidden under headers
+    const toolbar = document.getElementById('chapter-select');
+    if (toolbar) {
+        const yOffset = -120;
+        const y = toolbar.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
 }
 
 function prevPage() {

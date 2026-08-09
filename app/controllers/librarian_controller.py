@@ -729,3 +729,126 @@ async def reset_pwd(
     </body>
     </html>
     """)
+
+@router.get("/print-qr-labels", response_class=HTMLResponse)
+async def print_qr_labels(
+    request: Request,
+    book_id: int = None,
+    branch_id: int = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import BookCopy, Book, Branch
+    import urllib.parse
+
+    query = db.query(BookCopy).join(Book)
+    if book_id:
+        query = query.filter(BookCopy.book_id == book_id)
+    if current_user.role == "librarian" and current_user.branch_id:
+        query = query.filter(BookCopy.branch_id == current_user.branch_id)
+    elif branch_id:
+        query = query.filter(BookCopy.branch_id == branch_id)
+
+    copies = query.order_by(BookCopy.id.asc()).all()
+
+    labels_html = ""
+    for c in copies:
+        title = c.book.title if c.book else "Library Book"
+        author = c.book.author if c.book else "Effutu Library"
+        isbn = c.book.isbn or ""
+        token = c.qr_token
+        copy_code = c.copy_code
+        branch_name = c.branch.name if c.branch else "Main Branch"
+        
+        qr_img_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data={urllib.parse.quote(token)}"
+
+        labels_html += f"""
+        <div class="label-card bg-white border-2 border-slate-900 rounded-xl p-3 shadow-sm flex flex-col justify-between relative overflow-hidden page-break-inside-avoid">
+            <!-- Top Branding Header -->
+            <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
+                <div class="text-[9px] font-black uppercase text-slate-800 tracking-wider">Effutu Municipal Library</div>
+                <div class="text-[9px] font-mono font-bold text-slate-500">{branch_name}</div>
+            </div>
+
+            <!-- Main Label Content Grid -->
+            <div class="flex items-center gap-3">
+                <div class="text-center shrink-0">
+                    <img src="{qr_img_url}" class="w-20 h-20 border border-slate-300 rounded bg-white p-0.5 shadow-inner">
+                    <span class="text-[8px] font-mono font-bold text-slate-700 block mt-0.5">SCAN QR</span>
+                </div>
+                <div class="space-y-1 flex-1 min-w-0">
+                    <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{title}</h4>
+                    <p class="text-[10px] text-slate-600 font-bold truncate">Author: {author}</p>
+                    {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {isbn}</p>' if isbn else ''}
+                    
+                    <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+                        <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
+                            {copy_code}
+                        </span>
+                        <span class="text-[9px] font-mono text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">
+                            ID: {c.book_id}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Full QR Token Footer -->
+            <div class="mt-2 pt-1 border-t border-slate-200 flex justify-between items-center text-[8px] font-mono text-slate-500">
+                <span class="truncate font-bold">TOKEN: {token}</span>
+                <span class="shrink-0 font-bold text-emerald-700">EFFUTU-LIB</span>
+            </div>
+        </div>
+        """
+
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <title>Print Physical Book QR Labels & Barcodes - Effutu Library System</title>
+        <style>
+            @media print {{
+                .no-print {{ display: none !important; }}
+                body {{ background: white !important; padding: 0 !important; }}
+                .label-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }}
+                .label-card {{ border: 2px solid #000 !important; break-inside: avoid; }}
+            }}
+            .label-grid {{
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 16px;
+            }}
+        </style>
+    </head>
+    <body class="bg-slate-100 min-h-screen p-4 sm:p-8 font-sans">
+
+        <!-- Top Controls Bar -->
+        <div class="no-print max-w-6xl mx-auto mb-6 bg-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-lg font-extrabold flex items-center gap-2">
+                    <i class="fa-solid fa-qrcode text-amber-400"></i> Physical Book QR & Barcode Label Printer
+                </h1>
+                <p class="text-xs text-slate-300 font-medium mt-1">Print adhesive QR stickers for physical book spines, back covers, and inventory tags.</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/dashboard/librarian" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
+                </a>
+                <button onclick="window.print()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-print text-sm"></i> Print Label Sheet (PDF)
+                </button>
+            </div>
+        </div>
+
+        <!-- Printable Label Sheet Grid -->
+        <div class="max-w-6xl mx-auto">
+            <div class="label-grid">
+                {labels_html if labels_html else '<div class="col-span-full text-center py-12 text-slate-500 font-bold bg-white rounded-2xl p-6 border border-slate-200">No book copies found for printing.</div>'}
+            </div>
+        </div>
+
+    </body>
+    </html>
+    """)
