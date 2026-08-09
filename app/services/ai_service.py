@@ -321,6 +321,26 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
     user_role = getattr(current_user, "role", "guest") if current_user else "guest"
     user_name = getattr(current_user, "full_name", "Guest") if current_user else "Guest Patron"
 
+    # Automatic Real-Time Web Search Enrichment
+    realtime_keywords = [
+        "president", "who is", "current", "latest", "news", "today", "now",
+        "wassce", "bece", "waec", "timetable", "election", "weather", "sports",
+        "governor", "prime minister", "minister", "champion", "winner", "leader"
+    ]
+    message_lower = message.lower()
+    needs_web_search = any(k in message_lower for k in realtime_keywords) or "?" in message
+
+    live_web_context = ""
+    if needs_web_search:
+        try:
+            web_results = web_search_online(message)
+            if web_results:
+                snippets = [r.get('snippet', '') for r in web_results if r.get('snippet')]
+                if snippets:
+                    live_web_context = f"\nLIVE REAL-TIME INTERNET SEARCH RESULTS FOR '{message}':\n" + "\n".join([f"- {s}" for s in snippets])
+        except Exception as err:
+            print(f"Pre-query web search warning: {err}")
+
     system_prompt = f"""
 You are Araba, the intelligent, friendly Ghanaian AI assistant for the Effutu Municipal Library Network.
 Akwaaba is your standard Ghanaian greeting!
@@ -329,9 +349,11 @@ CURRENT SYSTEM DATE & TIME: {now_str}
 
 SYSTEM CAPABILITIES & REAL-TIME WEB ACCESS:
 1. REAL-TIME SYSTEM TIME: You ALWAYS know the current date and time ({now_str}). State the current date/time directly when asked.
-2. LIVE INTERNET WEB SEARCH (`web_search` tool): When asked about current leaders (e.g. US President, Ghana President), breaking news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, sports, or general knowledge, YOU MUST CALL THE `web_search` TOOL.
-   - CRITICAL RULE: NEVER output literal text like "web_search : query" or "I'll need to do a web search". Just call the tool silently or state the answer cleanly in friendly natural language.
-3. BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
+2. LIVE INTERNET WEB SEARCH RESULTS: {live_web_context or "No pre-fetched search results needed for this request."}
+3. REAL-TIME FACTUAL ACCURACY RULE:
+   - When asked about current leaders (e.g. US President, Ghana President), breaking news, current events, dates, or exams, YOU MUST BASE YOUR ANSWER ON THE LIVE REAL-TIME INTERNET SEARCH RESULTS PROVIDED ABOVE.
+   - DO NOT answer from old training memory if live internet search results indicate updated information.
+4. BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
 
 Active Session User: {user_name} (Role: {user_role})
 
