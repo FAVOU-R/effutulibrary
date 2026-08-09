@@ -305,6 +305,13 @@ async def register(
         except Exception as e:
             print(f"ID photo upload warning: {e}")
 
+    # Password validation check
+    from app.config import settings
+    if len(password) < getattr(settings, "MIN_PASSWORD_LENGTH", 6):
+        msg = f"Password must be at least {getattr(settings, 'MIN_PASSWORD_LENGTH', 6)} characters long."
+        if wants_json: return JSONResponse(status_code=400, content={"error": msg})
+        return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
+
     # Duplicate Checks
     if email_clean and db.query(User).filter(User.email == email_clean).first():
         msg = "An account with this email address already exists."
@@ -503,7 +510,79 @@ async def login(
         (User.member_id == identifier_clean.upper())
     ).first()
 
+    if user:
+        now = datetime.utcnow()
+        # Check if user account is currently locked out
+        if user.locked_until and user.locked_until > now:
+            mins_left = max(1, int((user.locked_until - now).total_seconds() / 60) + 1)
+            msg = f"🔒 Account temporarily locked due to successive bad password attempts. Please try again in {mins_left} minute(s) or reset your password."
+            if wants_json:
+                return JSONResponse(status_code=429, content={"error": msg})
+            return HTMLResponse(f"""
+            <div style='max-width:450px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:24px; border-radius:12px; background:#fff5f5;'>
+                <h3 style='color:#dc2626;'>🚨 Account Temporarily Locked</h3>
+                <p style='color:#4b5563; font-size:14px;'>Your account is temporarily locked for <b>{mins_left} minute(s)</b> due to successive bad password attempts.</p>
+                <p style='font-size:12px; color:#6b7280;'>A security alert email has been dispatched to your registered email address.</p>
+                <div style='margin-top:15px;'>
+                    <a href='/auth/forgot-password' style='display:inline-block; padding:8px 16px; background:#dc2626; color:white; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;'>Reset Password Now</a>
+                    <a href='/auth/login' style='display:inline-block; margin-left:8px; color:#2563eb; font-size:12px;'>← Back to Login</a>
+                </div>
+            </div>
+            """, status_code=429)
+
+    # Password check
     if not user or not verify_password(password, user.hashed_password):
+        if user:
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            max_attempts = getattr(settings, "MAX_FAILED_LOGIN_ATTEMPTS", 5)
+            lockout_mins = getattr(settings, "ACCOUNT_LOCKOUT_MINUTES", 15)
+
+            if user.failed_login_attempts >= max_attempts:
+                user.locked_until = datetime.utcnow() + timedelta(minutes=lockout_mins)
+                user.failed_login_attempts = 0
+                db.commit()
+
+                # Dispatch Email Notification
+                if user.email:
+                    email_body = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #fca5a5; border-radius: 12px; background: #fff5f5;">
+                        <h2 style="color: #dc2626;">🚨 Security Alert: Account Temporarily Locked</h2>
+                        <p>Akwaaba <b>{user.full_name}</b>,</p>
+                        <p>Your Effutu Municipal Library account (ID: <b>{user.member_id or user.email}</b>) has been <b>temporarily locked for {lockout_mins} minutes</b> due to <b>{max_attempts} consecutive bad password attempts</b>.</p>
+                        <div style="background-color: #fef2f2; padding: 14px; border-left: 4px solid #ef4444; margin: 15px 0; font-size: 13px;">
+                            <b>Lockout Time:</b> {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}<br>
+                            <b>Lockout Duration:</b> {lockout_mins} minutes<br>
+                            <b>Reason:</b> Successive Bad Password Attempts
+                        </div>
+                        <p style="font-size: 13px; color: #374151;"><b>If this was you:</b> You can wait for the {lockout_mins}-minute timer to expire or reset your password using the button below.</p>
+                        <p style="font-size: 13px; color: #b91c1c; font-weight: bold;">If this was NOT you attempting to sign in:</p>
+                        <p style="font-size: 12px; color: #4b5563;">Someone may be attempting to gain unauthorized access to your account. We strongly advise resetting your password immediately or contacting your local branch librarian.</p>
+                        <div style="margin-top: 20px;">
+                            <a href="https://effutu-library-system.onrender.com/auth/forgot-password" style="background-color: #dc2626; color: white; padding: 10px 18px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px;">Reset Password Now</a>
+                        </div>
+                        <hr style="border: none; border-top: 1px solid #fee2e2; margin: 20px 0;">
+                        <p style="font-size: 11px; color: #9ca3af;">Effutu Municipal Library Network • Security & Protection Desk</p>
+                    </div>
+                    """
+                    send_email(user.email, "🚨 Security Alert: Account Temporarily Locked (Failed Login Attempts)", email_body)
+
+                msg = f"🔒 Account temporarily locked due to {max_attempts} successive bad password attempts. A security alert email has been sent to your address."
+                if wants_json:
+                    return JSONResponse(status_code=429, content={"error": msg})
+                return HTMLResponse(f"""
+                <div style='max-width:450px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:24px; border-radius:12px; background:#fff5f5;'>
+                    <h3 style='color:#dc2626;'>🚨 Account Temporarily Locked</h3>
+                    <p style='color:#4b5563; font-size:14px;'>Your account has been locked for <b>{lockout_mins} minutes</b> due to successive bad password attempts.</p>
+                    <p style='font-size:12px; color:#047857; font-weight:bold;'>An email alert was sent to your registered address just in case you were not the one trying to log in.</p>
+                    <div style='margin-top:15px;'>
+                        <a href='/auth/forgot-password' style='display:inline-block; padding:8px 16px; background:#dc2626; color:white; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;'>Reset Password Now</a>
+                        <a href='/auth/login' style='display:inline-block; margin-left:8px; color:#2563eb; font-size:12px;'>← Back to Login</a>
+                    </div>
+                </div>
+                """, status_code=429)
+            else:
+                db.commit()
+
         if wants_json:
             return JSONResponse(status_code=400, content={"error": "Invalid ID, email, phone, or password."})
         return HTMLResponse("""
@@ -524,6 +603,12 @@ async def login(
             <a href='/auth/login' style='color:#2563eb;'>← Back to Login</a>
         </div>
         """, status_code=403)
+
+    # Successful login: reset failed attempts & lockout timestamp
+    if user.failed_login_attempts or user.locked_until:
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        db.commit()
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
 
@@ -577,12 +662,12 @@ async def force_change_page(token: str):
             </div>
             <form method="post" action="/auth/force-change-password?token={token}" class="space-y-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">New Password (min 6 chars)</label>
-                    <input type="password" name="new_password" required minlength="6" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-1">New Password (min 8 chars)</label>
+                    <input type="password" name="new_password" required minlength="8" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Confirm New Password</label>
-                    <input type="password" name="confirm_password" required minlength="6" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
+                    <input type="password" name="confirm_password" required minlength="8" class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:border-emerald-600 focus:outline-none">
                 </div>
                 <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg shadow transition">
                     Update Password & Continue →
@@ -600,10 +685,11 @@ async def force_change_post(
     confirm_password: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    min_len = getattr(settings, "MIN_PASSWORD_LENGTH", 8)
     if new_password != confirm_password:
         return HTMLResponse("<h3>Passwords do not match</h3><a href='javascript:history.back()'>Back</a>", status_code=400)
-    if len(new_password) < 6:
-        return HTMLResponse("<h3>Password must be at least 6 characters</h3><a href='javascript:history.back()'>Back</a>", status_code=400)
+    if len(new_password) < min_len:
+        return HTMLResponse(f"<h3>Password must be at least {min_len} characters</h3><a href='javascript:history.back()'>Back</a>", status_code=400)
     
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

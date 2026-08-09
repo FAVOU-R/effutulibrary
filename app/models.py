@@ -48,6 +48,8 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     must_change_password = Column(Boolean, default=True)
     is_physically_verified = Column(Boolean, default=False)
+    failed_login_attempts = Column(Integer, default=0, nullable=True)
+    locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

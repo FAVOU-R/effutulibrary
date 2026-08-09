@@ -100,6 +100,8 @@ def on_startup():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;",
         "ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reject_reason TEXT;"
     ]
 

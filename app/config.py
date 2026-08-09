@@ -26,8 +26,15 @@ class Settings:
     SENDER_EMAIL: str = os.getenv("EMAIL_FROM", "effutulibrarynetwork@gmail.com")
     SENDER_NAME: str = os.getenv("EMAIL_FROM_NAME", "Effutu Library Network")
 
-    # Library Rules
+    # Library Rules & Borrowing Limits
     LOAN_PERIOD_DAYS: int = 14
     DAILY_FINE_GHS: float = 0.50
+    MAX_BOOKS_PER_PATRON: int = int(os.getenv("MAX_BOOKS_PER_PATRON", "3"))
+
+    # Security & Password Policies
+    MIN_PASSWORD_LENGTH: int = int(os.getenv("MIN_PASSWORD_LENGTH", "8"))
+    MAX_FAILED_LOGIN_ATTEMPTS: int = int(os.getenv("MAX_FAILED_LOGIN_ATTEMPTS", "5"))
+    ACCOUNT_LOCKOUT_MINUTES: int = int(os.getenv("ACCOUNT_LOCKOUT_MINUTES", "15"))
 
 settings = Settings()
+

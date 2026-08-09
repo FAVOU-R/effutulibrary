@@ -26,8 +26,22 @@ def issue_book(
     if not patron or not patron.is_approved:
         raise HTTPException(status_code=400, detail="Patron not found or pending approval")
 
+    # Enforce Configurable Maximum Borrowing Limit
+    from app.config import settings
+    active_loans_count = db.query(Transaction).filter(
+        Transaction.patron_id == patron.id,
+        Transaction.status.in_(["active", "overdue"])
+    ).count()
+
+    max_allowed = getattr(settings, "MAX_BOOKS_PER_PATRON", 3)
+    if active_loans_count >= max_allowed:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Patron has reached the maximum allowed limit of {max_allowed} active book loans."
+        )
+
     issue_date = datetime.utcnow()
-    due_date = issue_date + timedelta(days=14)
+    due_date = issue_date + timedelta(days=settings.LOAN_PERIOD_DAYS)
 
     tx = Transaction(
         book_copy_id=copy.id,
