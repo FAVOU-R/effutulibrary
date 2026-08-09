@@ -148,6 +148,8 @@ def on_startup():
         ("users", "profile_picture_url", "VARCHAR(255)"),
         ("reservations", "reject_reason", "TEXT"),
         ("books", "content_text", "TEXT"),
+        ("books", "shelf_location", "VARCHAR(100) DEFAULT 'Shelf 1A - General Collection'"),
+        ("books", "call_number", "VARCHAR(50)"),
     ]
 
     try:
