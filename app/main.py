@@ -73,14 +73,28 @@ templates = Jinja2Templates(directory=templates_dir)
 async def custom_404_handler(request: Request, exc: Exception):
     if request.url.path.startswith("/api/"):
         return JSONResponse(status_code=404, content={"error": "Requested resource not found"})
-    user = get_current_user_optional(request, next(get_db()))
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        user = get_current_user_optional(request, db)
+    except Exception:
+        user = None
+    finally:
+        db.close()
     return templates.TemplateResponse(request=request, name="errors/404.html", context={"current_user": user}, status_code=404)
 
 @app.exception_handler(500)
 async def custom_500_handler(request: Request, exc: Exception):
     if request.url.path.startswith("/api/"):
         return JSONResponse(status_code=500, content={"error": "An internal server error occurred"})
-    user = get_current_user_optional(request, next(get_db()))
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        user = get_current_user_optional(request, db)
+    except Exception:
+        user = None
+    finally:
+        db.close()
     return templates.TemplateResponse(request=request, name="errors/500.html", context={"current_user": user}, status_code=500)
 
 # Register API Routers
@@ -98,67 +112,51 @@ app.include_router(notifications_router)
 
 @app.on_event("startup")
 def on_startup():
-    from sqlalchemy import text
+    from sqlalchemy import text, inspect
     Base.metadata.create_all(bind=engine)
 
-    statements = [
-        """
-        DO $$ 
-        BEGIN 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card_number') THEN
-                IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='ghana_card') THEN
-                    ALTER TABLE users RENAME COLUMN ghana_card TO ghana_card_number;
-                ELSE
-                    ALTER TABLE users ADD COLUMN ghana_card_number VARCHAR(50);
-                END IF;
-            END IF;
-        END $$;
-        """,
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS ghana_card_number VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_type VARCHAR(50) DEFAULT 'ghanacard';",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS sex VARCHAR(20);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS school_occupation VARCHAR(150);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS location VARCHAR(150);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_status VARCHAR(30) DEFAULT 'pending';",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_by INTEGER;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS rejection_reason TEXT;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS id_photo_url VARCHAR(255);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(150);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_phone VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(150);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS guardian_relationship VARCHAR(50);",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT TRUE;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;",
-        "ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reject_reason TEXT;"
-    ]
-
-    for stmt in statements:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text(stmt))
-                conn.commit()
-        except Exception:
-            pass
-
-    column_additions = [
+    columns_to_ensure = [
+        ("users", "ghana_card_number", "VARCHAR(50)"),
+        ("users", "id_type", "VARCHAR(50) DEFAULT 'ghanacard'"),
+        ("users", "id_number", "VARCHAR(50)"),
+        ("users", "phone", "VARCHAR(50)"),
+        ("users", "sex", "VARCHAR(20)"),
+        ("users", "school_occupation", "VARCHAR(150)"),
+        ("users", "location", "VARCHAR(150)"),
+        ("users", "verification_status", "VARCHAR(30) DEFAULT 'pending'"),
+        ("users", "verified_by", "INTEGER"),
+        ("users", "verified_at", "TIMESTAMP"),
+        ("users", "rejection_reason", "TEXT"),
+        ("users", "id_photo_url", "VARCHAR(255)"),
+        ("users", "guardian_name", "VARCHAR(150)"),
+        ("users", "guardian_phone", "VARCHAR(50)"),
+        ("users", "guardian_email", "VARCHAR(150)"),
+        ("users", "guardian_relationship", "VARCHAR(50)"),
+        ("users", "is_approved", "BOOLEAN DEFAULT TRUE"),
+        ("users", "is_active", "BOOLEAN DEFAULT TRUE"),
+        ("users", "must_change_password", "BOOLEAN DEFAULT TRUE"),
+        ("users", "is_physically_verified", "BOOLEAN DEFAULT FALSE"),
+        ("users", "failed_login_attempts", "INTEGER DEFAULT 0"),
+        ("users", "locked_until", "TIMESTAMP"),
         ("users", "username", "VARCHAR(50)"),
         ("users", "profile_picture_url", "VARCHAR(255)"),
+        ("reservations", "reject_reason", "TEXT"),
     ]
 
-    with engine.connect() as conn:
-        for table, col, col_type in column_additions:
+    try:
+        inspector = inspect(engine)
+        for table, col, col_type in columns_to_ensure:
             try:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};"))
-                conn.commit()
-            except Exception:
-                pass
+                existing_cols = [c['name'] for c in inspector.get_columns(table)]
+                if col not in existing_cols:
+                    with engine.connect() as conn:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};"))
+                        conn.commit()
+                        print(f"[MIGRATION SUCCESS] Added column '{col}' to table '{table}'")
+            except Exception as ex:
+                print(f"[MIGRATION WARNING] Column '{col}' on '{table}': {ex}")
+    except Exception as e:
+        print(f"[MIGRATION ERROR] {e}")
 
     # Backfill usernames for any pre-existing users without a handle
     try:
