@@ -94,6 +94,26 @@ def qr_checkout(
     if not token_clean:
         return JSONResponse(status_code=400, content={"error": "QR Token cannot be empty"})
 
+    # 1. Security Check: Require Physical ID Verification for Patrons
+    if current_user.role == "patron":
+        if not current_user.is_approved or current_user.verification_status != "verified":
+            return JSONResponse(
+                status_code=403,
+                content={"error": f"Physical ID Verification Required: Hi {current_user.full_name}, please present your Ghana Card, School ID, or Voters ID at the library desk to activate physical book borrowing privileges."}
+            )
+
+        # 2. Check Active Loan Limit (Max 3 books)
+        from app.models import Transaction
+        active_loans_count = db.query(Transaction).filter(
+            Transaction.patron_id == current_user.id,
+            Transaction.status.in_(["active", "overdue"])
+        ).count()
+        if active_loans_count >= 3:
+            return JSONResponse(
+                status_code=400,
+                content={"error": f"Borrowing Limit Reached: You currently have {active_loans_count} active physical loans (Max 3 allowed). Please return a book to borrow a new one."}
+            )
+
     # 1. Exact match on full qr_token or full copy_code (case-insensitive)
     copy = db.query(BookCopy).filter(
         (BookCopy.qr_token.ilike(token_clean)) | (BookCopy.copy_code.ilike(token_clean))
@@ -162,4 +182,42 @@ def qr_checkout(
         "branch_name": copy.branch.name if copy.branch else "Library Desk",
         "checkout_time": issue_date.strftime("%H:%M:%S GMT"),
         "due_date": due_date.strftime("%Y-%m-%d")
+    })
+
+@router.post("/extend/{trans_id}")
+def extend_loan(
+    trans_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+    if not tx:
+        return JSONResponse(status_code=404, content={"error": "Loan record not found"})
+
+    # Check permission
+    if current_user.role == "patron" and tx.patron_id != current_user.id:
+        return JSONResponse(status_code=403, content={"error": "Unauthorized to extend this loan"})
+
+    tx.due_date = tx.due_date + timedelta(days=7)
+    if tx.status == "overdue":
+        tx.status = "active"
+
+    try:
+        from app.models import Notification
+        b_title = tx.book_copy.book.title if (tx.book_copy and tx.book_copy.book) else "Book"
+        notif = Notification(
+            user_id=tx.patron_id,
+            title="Loan Extended (+7 Days) 📅",
+            message=f"Due date for '{b_title}' has been extended to {tx.due_date.strftime('%Y-%m-%d')}.",
+            type="success"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[EXTEND NOTIF WARNING] {ex}")
+
+    db.commit()
+
+    return JSONResponse(content={
+        "message": f"Loan extended by +7 days! New return due date: {tx.due_date.strftime('%Y-%m-%d')}.",
+        "new_due_date": tx.due_date.strftime("%Y-%m-%d")
     })

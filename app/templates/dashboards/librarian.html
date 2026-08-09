@@ -37,26 +37,26 @@
         <!-- Physical ID Verification Desk -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
             <div>
-                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-id-card text-emerald-600 text-sm"></i>
                     Physical ID Verification Desk ({{ pending_users|length }})
                 </h3>
-                <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
+                <p class="text-xs text-slate-600 font-medium mt-1 leading-relaxed">
                     Inspect patron's physical Ghana Card, School ID, or Voters ID on first visit to verify account & grant full borrowing limit.
                 </p>
             </div>
 
             <div class="space-y-3">
                 {% for u in pending_users %}
-                <div class="p-4 bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition">
-                    <div class="space-y-0.5">
-                        <div class="font-bold text-slate-900 text-xs">{{ u.full_name }} <span class="text-[10px] text-emerald-700 font-mono font-bold">({{ u.member_id }})</span></div>
-                        <div class="text-[11px] text-slate-600 font-mono">
+                <div class="p-4 bg-slate-50/90 hover:bg-slate-100 border border-slate-200 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 transition shadow-sm">
+                    <div class="space-y-1">
+                        <div class="font-black text-slate-900 text-sm">{{ u.full_name }} <span class="text-xs text-emerald-800 font-mono font-black">({{ u.member_id }})</span></div>
+                        <div class="text-xs text-slate-700 font-mono font-bold">
                             {{ u.id_type|upper if u.id_type else 'GHANA CARD' }}: {{ u.id_number or u.alt_contact or u.ghana_card_number or 'No Card Provided' }}
                         </div>
-                        <div class="text-slate-400 text-[11px] font-medium">Contact: {{ u.phone or u.email }}</div>
+                        <div class="text-slate-600 text-xs font-semibold">Contact: {{ u.phone or u.email }}</div>
                     </div>
-                    <button onclick="approveUser({{ u.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3.5 py-2 rounded-xl shadow-sm transition shrink-0">
+                    <button onclick="approveUser({{ u.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow transition shrink-0">
                         <i class="fa-solid fa-user-check"></i> Verify Physical ID
                     </button>
                 </div>
@@ -70,27 +70,27 @@
         </div>
 
         <!-- Pending Physical Desk Pick-Up Holds -->
-        <div class="bg-white rounded-2xl border border-amber-200/90 p-5 shadow-sm space-y-4 bg-amber-50/20">
+        <div class="bg-white rounded-2xl border border-amber-300 p-5 shadow-sm space-y-4 bg-amber-50/30">
             <div>
-                <h3 class="text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-2">
+                <h3 class="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-bookmark text-amber-600 text-sm"></i>
                     Pending Pick-Up Holds ({{ pending_reservations|length }})
                 </h3>
-                <p class="text-[11px] text-amber-800 font-medium mt-1 leading-relaxed">
+                <p class="text-xs text-amber-900 font-medium mt-1 leading-relaxed">
                     Patrons reserved these physical books online for 48h desk pickup. Pull copies off shelf and click "Hand Over" when patron arrives.
                 </p>
             </div>
 
             <div class="space-y-3">
                 {% for r in pending_reservations %}
-                <div class="p-3.5 bg-white border border-amber-300 rounded-xl flex flex-col justify-between gap-2 shadow-sm">
-                    <div>
-                        <div class="font-black text-slate-900 text-xs line-clamp-1">{{ r.book_title }}</div>
-                        <div class="text-[11px] text-slate-700 font-bold mt-0.5">Reserved by: <span class="text-amber-900">{{ r.patron_name }}</span> ({{ r.patron_phone }})</div>
-                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">Expires: {{ r.expires_at }}</div>
+                <div class="p-4 bg-white border border-amber-300 rounded-xl flex flex-col justify-between gap-3 shadow-sm">
+                    <div class="space-y-1">
+                        <div class="font-black text-slate-900 text-sm line-clamp-2 leading-snug">{{ r.book_title }}</div>
+                        <div class="text-xs text-slate-800 font-bold">Reserved by: <span class="text-amber-950 font-black">{{ r.patron_name }}</span> ({{ r.patron_phone }})</div>
+                        <div class="text-xs text-slate-600 font-mono font-bold">Expires: {{ r.expires_at }}</div>
                     </div>
-                    <button onclick="fulfillReservation({{ r.id }})" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-hand-holding-hand"></i> Confirm Desk Issue & Hand Over
+                    <button onclick="fulfillReservation({{ r.id }})" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs py-2.5 rounded-xl shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-hand-holding-hand text-sm"></i> Confirm Desk Issue & Hand Over
                     </button>
                 </div>
                 {% else %}
@@ -105,7 +105,7 @@
         <!-- Branch Active & Overdue Loans -->
         <div class="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
             <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
-                <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <h3 class="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-file-invoice text-emerald-600 text-sm"></i>
                     Branch Active Loans
                 </h3>
@@ -114,27 +114,27 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs text-slate-600 border-collapse">
                     <thead>
-                        <tr class="bg-slate-100/80 text-slate-500 font-extrabold uppercase text-[11px] border-b border-slate-200">
-                            <th class="p-3">Book Title</th>
-                            <th class="p-3">Borrower</th>
-                            <th class="p-3">Due Date</th>
-                            <th class="p-3 text-right">Action</th>
+                        <tr class="bg-slate-100 uppercase text-slate-700 font-black text-xs border-b border-slate-300">
+                            <th class="p-4">Book Title</th>
+                            <th class="p-4">Borrower</th>
+                            <th class="p-4">Due Date</th>
+                            <th class="p-4 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         {% for t in active_loans %}
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 font-bold text-slate-900 line-clamp-1">{{ t.book_title }}</td>
-                            <td class="p-3 font-medium text-slate-700">{{ t.patron_name }}</td>
-                            <td class="p-3 font-mono">
+                            <td class="p-4 font-black text-slate-900 text-xs leading-snug line-clamp-2">{{ t.book_title }}</td>
+                            <td class="p-4 font-extrabold text-slate-800 text-xs whitespace-nowrap">{{ t.patron_name }}</td>
+                            <td class="p-4 font-mono font-bold text-xs whitespace-nowrap">
                                 {% if t.is_overdue %}
-                                    <span class="bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[10px] px-2 py-0.5 rounded">GHS {{ "%.2f"|format(t.fine_amount_ghs) }}</span>
+                                    <span class="bg-rose-100 text-rose-800 border border-rose-200 font-black text-xs px-2.5 py-1 rounded-lg">GHS {{ "%.2f"|format(t.fine_amount_ghs) }}</span>
                                 {% else %}
-                                    <span class="text-slate-700 font-medium text-[11px]">{{ t.due_date }}</span>
+                                    <span class="text-slate-800 font-bold text-xs">{{ t.due_date }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-3 text-right">
-                                <button onclick="returnBook({{ t.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3 py-1 rounded shadow-sm transition">Return</button>
+                            <td class="p-4 text-right whitespace-nowrap">
+                                <button onclick="returnBook({{ t.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs px-3.5 py-1.5 rounded-xl shadow-sm transition">Return</button>
                             </td>
                         </tr>
                         {% else %}

@@ -104,9 +104,11 @@ app.include_router(user_router)
 app.include_router(book_router)
 app.include_router(issue_router)
 
-from app.controllers.issue_controller import qr_checkout
+from app.controllers.issue_controller import qr_checkout, extend_loan
 app.post("/api/issue/qr-checkout")(qr_checkout)
 app.post("/api/circulation/qr-checkout")(qr_checkout)
+app.post("/api/issue/extend/{trans_id}")(extend_loan)
+app.post("/api/circulation/extend/{trans_id}")(extend_loan)
 app.include_router(ai_router)
 app.include_router(librarian_router)
 app.include_router(reservation_router)

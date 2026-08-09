@@ -96,19 +96,22 @@ async def librarian_reservations(
             "cancelled": "bg-slate-100 text-slate-600",
             "expired": "bg-rose-100 text-rose-800"
         }
-        badge = f"<span class='px-2 py-0.5 text-[10px] font-bold rounded uppercase {status_colors.get(r.status, 'bg-slate-100')}'>{r.status}</span>"
+        badge = f"<span class='px-3 py-1 text-xs font-black rounded-xl uppercase shadow-sm {status_colors.get(r.status, 'bg-slate-100')}'>{r.status}</span>"
 
         rows += f"""
-        <tr class='border-b border-slate-200 hover:bg-slate-50 transition text-xs'>
-            <td class='p-3 font-mono font-bold text-emerald-800'>#RES-{r.id}</td>
-            <td class='p-3 font-bold text-slate-800'>{patron_name}<br><span class='text-[10px] text-slate-400'>{patron_phone} • {branch_name}</span></td>
-            <td class='p-3 font-semibold text-slate-700'>{book_title}</td>
-            <td class='p-3 font-mono text-slate-500'>{r.reserved_at.strftime('%Y-%m-%d %H:%M')}</td>
-            <td class='p-3'>{badge}</td>
-            <td class='p-3 space-x-1 whitespace-nowrap'>
-                {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="ready"><button class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-[11px]">Mark Ready</button></form>' if r.status == 'reserved' else ''}
-                {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="collected"><button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px]">Mark Collected</button></form>' if r.status == 'ready' else ''}
-                {'<button onclick="rejectRes(' + str(r.id) + ')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px]">Reject / Cancel</button>' if r.status in ['reserved', 'ready'] else ''}
+        <tr class='border-b border-slate-200 hover:bg-slate-50/90 transition text-xs'>
+            <td class='p-4 font-mono font-black text-sm text-emerald-900 whitespace-nowrap'>#RES-{r.id}</td>
+            <td class='p-4 min-w-[200px]'>
+                <div class='text-sm font-black text-slate-900'>{patron_name}</div>
+                <div class='text-xs font-bold text-slate-600 mt-0.5'>{patron_phone} • <span class='text-emerald-800 font-mono'>{branch_name}</span></div>
+            </td>
+            <td class='p-4 min-w-[220px] font-black text-sm text-slate-900 leading-snug'>{book_title}</td>
+            <td class='p-4 whitespace-nowrap font-mono font-bold text-xs text-slate-700'>{r.reserved_at.strftime('%Y-%m-%d %H:%M')}</td>
+            <td class='p-4 whitespace-nowrap'>{badge}</td>
+            <td class='p-4 space-x-1.5 whitespace-nowrap'>
+                {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/status" class="inline"><input type="hidden" name="status" value="ready"><button class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-xl text-xs shadow">Mark Ready</button></form>' if r.status == 'reserved' else ''}
+                {'<form method="post" action="/librarian/reservations/' + str(r.id) + '/fulfill" class="inline"><button class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-xs shadow"><i class="fa-solid fa-hand-holding-hand mr-1"></i> Hand Over</button></form>' if r.status == 'ready' else ''}
+                {'<button onclick="rejectRes(' + str(r.id) + ')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow">Reject / Cancel</button>' if r.status in ['reserved', 'ready'] else ''}
             </td>
         </tr>
         """
@@ -120,35 +123,42 @@ async def librarian_reservations(
         <meta charset="UTF-8">
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <title>Manage Book Reservations - Effutu Library</title>
+        <title>Manage Book Reservations - Effutu Library System</title>
     </head>
-    <body class="bg-slate-100 min-h-screen p-6 font-sans">
-        <div class="max-w-6xl mx-auto space-y-6">
-            <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <body class="bg-slate-100 min-h-screen p-4 sm:p-6 font-sans">
+        <div class="max-w-[1536px] mx-auto space-y-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-slate-800">Book Reservation Desk</h2>
-                    <p class="text-xs text-slate-500">Track patron hold requests, mark ready for pick up, & notify patrons</p>
+                    <h2 class="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-bookmark text-indigo-600"></i> Book Reservation Desk
+                    </h2>
+                    <p class="text-xs text-slate-500 font-medium mt-1">Track patron 48-hour hold requests, confirm desk handovers, & manage branch pick-ups</p>
                 </div>
-                <a href="/dashboard/{current_user.role}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-lg transition">
-                    Back to Dashboard
-                </a>
+                <div class="flex items-center gap-2">
+                    <a href="/librarian/loans" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1">
+                        <i class="fa-solid fa-file-invoice"></i> Circulation Desk
+                    </a>
+                    <a href="/dashboard/{current_user.role}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">
+                        Back to Dashboard
+                    </a>
+                </div>
             </div>
 
-            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-100 uppercase text-slate-500 font-bold border-b border-slate-200">
+                        <thead class="bg-slate-100 uppercase text-slate-700 font-black text-xs tracking-wider border-b border-slate-300">
                             <tr>
-                                <th class="p-3">Reservation ID</th>
-                                <th class="p-3">Patron Details</th>
-                                <th class="p-3">Book Title</th>
-                                <th class="p-3">Reserved Date</th>
-                                <th class="p-3">Status</th>
-                                <th class="p-3">Actions</th>
+                                <th class="p-4">Reservation ID</th>
+                                <th class="p-4">Patron Details</th>
+                                <th class="p-4">Book Title</th>
+                                <th class="p-4">Reserved Date</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {rows if rows else "<tr><td colspan='6' class='p-8 text-center text-slate-400'>No reservations recorded.</td></tr>"}
+                            {rows if rows else "<tr><td colspan='6' class='p-12 text-center text-slate-400 font-medium'>No book reservations recorded.</td></tr>"}
                         </tbody>
                     </table>
                 </div>

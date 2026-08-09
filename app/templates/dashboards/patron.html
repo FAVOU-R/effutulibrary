@@ -111,6 +111,7 @@
                         <th class="p-3.5">Issue Date</th>
                         <th class="p-3.5">Due Date (14 Days)</th>
                         <th class="p-3.5">Fine Status</th>
+                        <th class="p-3.5 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -135,10 +136,17 @@
                                 <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Active (On Schedule)</span>
                             {% endif %}
                         </td>
+                        <td class="p-3.5 text-right">
+                            {% if t.type != 'Reservation' and not t.is_overdue %}
+                                <button onclick="extendLoan({{ t.id }})" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">
+                                    <i class="fa-solid fa-calendar-plus mr-1"></i> +7 Days
+                                </button>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="4" class="p-8 text-center text-slate-400 font-medium">
+                        <td colspan="5" class="p-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-book-open text-2xl mb-2 text-slate-300 block"></i>
                             You currently have no active book loans or physical branch reservations. Browse catalog below to borrow or reserve!
                         </td>
@@ -280,5 +288,16 @@ document.addEventListener("DOMContentLoaded", async function() {
         container.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400 text-xs font-medium"><i class="fa-solid fa-circle-exclamation text-xl mb-1.5 text-amber-500 block"></i>Unable to load AI recommendations right now. Please refresh.</div>`;
     }
 });
+async function extendLoan(transId) {
+    if (!confirm("Request +7 days loan extension for this book?")) return;
+    try {
+        const res = await fetch(`/api/issue/extend/${transId}`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || data.error);
+        if (res.ok) window.location.reload();
+    } catch(e) {
+        alert("Error extending loan due date");
+    }
+}
 </script>
 {% endblock %}

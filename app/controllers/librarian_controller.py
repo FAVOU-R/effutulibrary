@@ -88,31 +88,31 @@ async def list_users(
         loc_disp = u.location or branch_name
 
         rows += f"""
-        <tr class='border-b border-slate-200 hover:bg-slate-50/80 transition text-xs'>
-            <td class='p-3.5 font-mono font-black text-emerald-900 text-xs whitespace-nowrap'><span class='bg-emerald-50 px-2 py-1 rounded border border-emerald-200 shadow-sm'>{u.member_id or f'ID-{u.id}'}</span></td>
-            <td class='p-3.5 min-w-[170px] font-black text-slate-900 text-sm leading-snug'>{u.full_name}<br><span class='text-[11px] text-slate-600 font-bold tracking-tight block mt-0.5'>{sub_text}</span></td>
-            <td class='p-3.5 font-semibold text-slate-800 text-xs leading-relaxed max-w-[200px] truncate'>{contact_disp}<br><span class='text-[11px] font-bold text-slate-500 block mt-0.5 truncate'>{loc_disp}</span></td>
-            <td class='p-3.5 text-xs whitespace-nowrap'><span class='font-black text-slate-800 uppercase tracking-wider block mb-0.5'>{id_type_label}</span><span class='text-[11px] text-slate-700 font-mono font-bold block'>{id_disp}</span>{photo_link}</td>
-            <td class='p-3.5 uppercase font-black text-[11px] text-slate-700 tracking-wider whitespace-nowrap'>{u.role.replace('_', ' ')}</td>
-            <td class='p-3.5 whitespace-nowrap'>{status_badge}</td>
-            <td class='p-3.5 whitespace-nowrap'>{v_badge}</td>
-            <td class='p-3.5 whitespace-nowrap space-y-1.5'>
+        <tr class='border-b border-slate-200 hover:bg-slate-50/90 transition text-xs'>
+            <td class='p-4 font-mono font-black text-sm text-emerald-950 whitespace-nowrap'><span class='bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-300 shadow-sm'>{u.member_id or f'ID-{u.id}'}</span></td>
+            <td class='p-4 min-w-[190px] font-black text-slate-900 text-base leading-snug'>{u.full_name}<br><span class='text-xs text-slate-600 font-bold tracking-tight block mt-0.5'>{sub_text}</span></td>
+            <td class='p-4 font-bold text-slate-800 text-xs leading-relaxed max-w-[200px] truncate'>{contact_disp}<br><span class='text-xs font-bold text-slate-600 block mt-0.5 truncate'>{loc_disp}</span></td>
+            <td class='p-4 text-xs whitespace-nowrap'><span class='font-black text-slate-900 uppercase tracking-wider block mb-0.5'>{id_type_label}</span><span class='text-xs text-slate-800 font-mono font-bold block'>{id_disp}</span>{photo_link}</td>
+            <td class='p-4 uppercase font-black text-xs text-slate-800 tracking-wider whitespace-nowrap'>{u.role.replace('_', ' ')}</td>
+            <td class='p-4 whitespace-nowrap'>{status_badge}</td>
+            <td class='p-4 whitespace-nowrap'>{v_badge}</td>
+            <td class='p-4 whitespace-nowrap space-y-1.5'>
                 <div class='flex items-center gap-1.5'>
                     <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
-                        <button class='px-2.5 py-1 text-white font-extrabold rounded-md text-[11px] shadow-sm transition {active_btn_color}'>{active_btn_label}</button>
+                        <button class='px-3 py-1.5 text-white font-extrabold rounded-xl text-xs shadow-sm transition {active_btn_color}'>{active_btn_label}</button>
                     </form>
-                    {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-md text-[11px] shadow-sm transition">Verify</button></form>' if (u.verification_status != 'verified') else ''}
-                    {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-md text-[11px] shadow-sm transition inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
+                    {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow-sm transition">Verify</button></form>' if (u.verification_status != 'verified') else ''}
+                    {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow-sm transition inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
                 </div>
                 <div class='flex items-center gap-1.5'>
                     <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
-                        <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-md text-[11px] shadow-sm transition'><i class='fa-solid fa-key text-[10px] mr-1'></i> Reset Pwd</button>
+                        <button class='px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs shadow-sm transition'><i class='fa-solid fa-key text-xs mr-1'></i> Reset Pwd</button>
                     </form>
                     <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
-                        <button class='px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-md text-[11px] shadow-sm transition'><i class='fa-solid fa-id-card text-[10px] mr-1'></i> Desk Reset</button>
+                        <button class='px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-xl text-xs shadow-sm transition'><i class='fa-solid fa-id-card text-xs mr-1'></i> Desk Reset</button>
                     </form>
                     <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
-                        <button class='px-2 py-1 bg-slate-200 hover:bg-rose-600 hover:text-white text-slate-700 font-extrabold rounded-md text-[11px] shadow-sm transition' title="Delete User"><i class='fa-solid fa-trash-can'></i></button>
+                        <button class='px-2.5 py-1.5 bg-slate-200 hover:bg-rose-600 hover:text-white text-slate-700 font-extrabold rounded-xl text-xs shadow-sm transition' title="Delete User"><i class='fa-solid fa-trash-can'></i></button>
                     </form>
                 </div>
             </td>
@@ -781,6 +781,7 @@ async def print_qr_labels(
             title = c.book.title if c.book else "Library Book"
             author = c.book.author if c.book else "Effutu Library"
             isbn = c.book.isbn or ""
+            shelf_loc = getattr(c.book, 'shelf_location', None) or "Shelf 1A - General Collection"
             token = c.qr_token
             copy_code = c.copy_code
             branch_name = c.branch.name if c.branch else "Main Branch"
@@ -803,6 +804,9 @@ async def print_qr_labels(
                         <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{title}</h4>
                         <p class="text-[10px] text-slate-600 font-bold truncate">Author: {author}</p>
                         {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {isbn}</p>' if isbn else ''}
+                        <p class="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate">
+                            <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> {shelf_loc}
+                        </p>
                         
                         <div class="pt-1 flex items-center gap-1.5 flex-wrap">
                             <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
@@ -844,6 +848,9 @@ async def print_qr_labels(
                         <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{b.title}</h4>
                         <p class="text-[10px] text-slate-600 font-bold truncate">Author: {b.author}</p>
                         {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {b.isbn}</p>' if b.isbn else ''}
+                        <p class="text-[9px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate">
+                            <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i> {getattr(b, 'shelf_location', None) or 'Shelf 1A - General Collection'}
+                        </p>
                         
                         <div class="pt-1 flex items-center gap-1.5 flex-wrap">
                             <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
@@ -935,3 +942,347 @@ async def print_qr_labels(
     </body>
     </html>
     """)
+
+@router.get("/loans", response_class=HTMLResponse)
+async def list_loans(
+    request: Request,
+    q: str = "",
+    status_filter: str = "all",
+    branch_id: int = 0,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Transaction, BookCopy, Book, Branch
+    from datetime import datetime
+
+    branches = db.query(Branch).all()
+    query = db.query(Transaction).join(BookCopy).join(Book).join(User, Transaction.patron_id == User.id)
+
+    # Filter by search query
+    if q.strip():
+        term = f"%{q.strip()}%"
+        query = query.filter(
+            (Book.title.ilike(term)) |
+            (User.full_name.ilike(term)) |
+            (User.member_id.ilike(term)) |
+            (User.phone.ilike(term)) |
+            (User.email.ilike(term)) |
+            (BookCopy.copy_code.ilike(term)) |
+            (BookCopy.qr_token.ilike(term))
+        )
+
+    # Filter by status
+    if status_filter != "all":
+        query = query.filter(Transaction.status == status_filter)
+
+    # Filter by branch
+    if branch_id and branch_id > 0:
+        query = query.filter(BookCopy.branch_id == branch_id)
+    elif current_user.role == "librarian" and current_user.branch_id and branch_id == 0:
+        # Default to librarian's branch if not explicitly searching all
+        pass
+
+    transactions = query.order_by(Transaction.id.desc()).all()
+
+    # Calculate metrics
+    tot_active = sum(1 for t in transactions if t.status == "active")
+    tot_overdue = sum(1 for t in transactions if t.status == "overdue")
+    tot_returned = sum(1 for t in transactions if t.status == "returned")
+    tot_fines = sum(t.fine_amount or 0.0 for t in transactions)
+
+    rows = ""
+    for t in transactions:
+        b_title = t.book_copy.book.title if (t.book_copy and t.book_copy.book) else "Library Book"
+        b_author = t.book_copy.book.author if (t.book_copy and t.book_copy.book) else ""
+        c_code = t.book_copy.copy_code if t.book_copy else "Copy"
+        p_name = t.patron.full_name if t.patron else "Patron"
+        p_member_id = t.patron.member_id if (t.patron and t.patron.member_id) else f"ID-{t.patron_id}"
+        p_phone = t.patron.phone if (t.patron and t.patron.phone) else "-"
+        p_email = t.patron.email if (t.patron and t.patron.email) else "-"
+        br_name = t.book_copy.branch.name if (t.book_copy and t.book_copy.branch) else "HQ Central Library"
+
+        issue_str = t.issue_date.strftime("%Y-%m-%d %H:%M") if t.issue_date else "-"
+        due_str = t.due_date.strftime("%Y-%m-%d") if t.due_date else "-"
+        return_str = t.return_date.strftime("%Y-%m-%d %H:%M") if t.return_date else "<span class='text-slate-400 font-medium italic'>On Loan</span>"
+
+        if t.status == "active":
+            st_badge = "<span class='px-2.5 py-1 text-xs font-black bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200'>🟢 ACTIVE LOAN</span>"
+        elif t.status == "overdue":
+            st_badge = f"<span class='px-2.5 py-1 text-xs font-black bg-rose-100 text-rose-800 rounded-lg border border-rose-200'>🚨 OVERDUE (GHS {t.fine_amount:.2f})</span>"
+        elif t.status == "returned":
+            st_badge = "<span class='px-2.5 py-1 text-xs font-black bg-blue-100 text-blue-900 rounded-lg border border-blue-200'>✅ RETURNED</span>"
+        else:
+            st_badge = f"<span class='px-2.5 py-1 text-xs font-black bg-slate-200 text-slate-800 rounded-lg'>{t.status.upper()}</span>"
+
+        action_btns = ""
+        if t.status in ["active", "overdue"]:
+            waive_btn = (
+                f'<form method="post" action="/librarian/loans/{t.id}/waive-fine" onsubmit="return confirm(\'Waive overdue fine of GHS {t.fine_amount:.2f} for {p_name}?\');" class="inline">'
+                f'<button class="px-2 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition flex items-center gap-1" title="Waive overdue fine"><i class="fa-solid fa-gift text-xs"></i> Waive Fine</button></form>'
+                if (t.fine_amount and t.fine_amount > 0) else ""
+            )
+            action_btns = f"""
+            <form method="post" action="/librarian/loans/{t.id}/receive" onsubmit="return confirm('Confirm receipt of returned book \\'{b_title}\\'?');" class="inline">
+                <button class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-lg shadow-sm transition flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check text-xs"></i> Receive & Return
+                </button>
+            </form>
+            <form method="post" action="/librarian/loans/{t.id}/extend" class="inline">
+                <button class="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-lg shadow-sm transition flex items-center gap-1" title="Extend due date by +7 days">
+                    <i class="fa-solid fa-calendar-plus text-xs"></i> +7 Days
+                </button>
+            </form>
+            {waive_btn}
+            """
+        else:
+            action_btns = f"<span class='text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200'><i class='fa-solid fa-check-double text-emerald-600 mr-1'></i> Processed ({return_str})</span>"
+
+        rows += f"""
+        <tr class="border-b border-slate-200 hover:bg-slate-50/90 transition text-xs">
+            <td class="p-4 font-bold text-slate-900 min-w-[220px]">
+                <div class="text-sm font-black text-slate-900 line-clamp-2 leading-snug">{b_title}</div>
+                <div class="text-xs text-slate-600 font-bold mt-0.5">By {b_author}</div>
+                <span class="inline-block mt-1.5 font-mono font-black text-xs bg-slate-100 text-slate-900 px-2 py-0.5 rounded border border-slate-300">{c_code}</span>
+            </td>
+            <td class="p-4 min-w-[200px]">
+                <div class="text-sm font-black text-slate-900">{p_name}</div>
+                <div class="text-xs font-mono font-black text-emerald-800 mt-0.5">{p_member_id}</div>
+                <div class="text-xs text-slate-700 font-semibold mt-0.5">{p_phone} • {p_email}</div>
+            </td>
+            <td class="p-4 font-bold text-xs text-slate-800 whitespace-nowrap">{br_name}</td>
+            <td class="p-4 whitespace-nowrap font-mono text-xs">
+                <span class="text-slate-600 font-medium block">Issued: {issue_str}</span>
+                <strong class="text-slate-900 font-bold block mt-0.5">Due: {due_str}</strong>
+            </td>
+            <td class="p-4 whitespace-nowrap font-mono text-xs font-bold text-slate-800">{return_str}</td>
+            <td class="p-4 whitespace-nowrap">{st_badge}</td>
+            <td class="p-4 whitespace-nowrap space-x-1.5">{action_btns}</td>
+        </tr>
+        """
+
+    branch_options = "".join([f'<option value="{b.id}" {"selected" if branch_id == b.id else ""}>{b.name}</option>' for b in branches])
+
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <title>Circulation & Loan Master Desk - Effutu Library System</title>
+    </head>
+    <body class="bg-slate-100 min-h-screen p-4 sm:p-6 font-sans">
+        <div class="max-w-[1536px] mx-auto space-y-6">
+
+            <!-- Header -->
+            <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-file-invoice text-emerald-600"></i>
+                        Circulation & Loan History Master Desk
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">Audit active book loans, view historical returns, manage due dates, & receive returned physical copies</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/scan-qr" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-qrcode"></i> Quick Borrow Desk
+                    </a>
+                    <a href="/dashboard/{current_user.role}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-3 bg-emerald-100 text-emerald-800 rounded-xl text-lg font-black"><i class="fa-solid fa-book-open"></i></div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Active Loans</span>
+                        <span class="text-xl font-black text-slate-900">{tot_active}</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-3 bg-rose-100 text-rose-800 rounded-xl text-lg font-black"><i class="fa-solid fa-clock"></i></div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Overdue Books</span>
+                        <span class="text-xl font-black text-rose-700">{tot_overdue}</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-3 bg-blue-100 text-blue-800 rounded-xl text-lg font-black"><i class="fa-solid fa-circle-check"></i></div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Returned History</span>
+                        <span class="text-xl font-black text-slate-900">{tot_returned}</span>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="p-3 bg-amber-100 text-amber-800 rounded-xl text-lg font-black"><i class="fa-solid fa-coins"></i></div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Fines Assessed</span>
+                        <span class="text-xl font-black text-amber-700">GHS {tot_fines:.2f}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters & Search -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                <form method="get" action="/librarian/loans" class="flex flex-wrap items-center gap-3 w-full">
+                    <div class="relative w-full sm:w-80">
+                        <input type="search" name="q" value="{q}" placeholder="Search patron, member ID, book, copy code..." class="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                    </div>
+
+                    <select name="status_filter" onchange="this.form.submit()" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-700 shadow-sm cursor-pointer">
+                        <option value="all" {"selected" if status_filter == "all" else ""}>All Statuses</option>
+                        <option value="active" {"selected" if status_filter == "active" else ""}>🟢 Active Loans Only</option>
+                        <option value="overdue" {"selected" if status_filter == "overdue" else ""}>🚨 Overdue Only</option>
+                        <option value="returned" {"selected" if status_filter == "returned" else ""}>✅ Returned History</option>
+                    </select>
+
+                    <select name="branch_id" onchange="this.form.submit()" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-700 shadow-sm cursor-pointer">
+                        <option value="0">All Branches</option>
+                        {branch_options}
+                    </select>
+
+                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition">Filter</button>
+                    {f'<a href="/librarian/loans" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl transition">Clear Filters</a>' if q or status_filter != 'all' or branch_id > 0 else ''}
+                </form>
+            </div>
+
+            <!-- Transactions Table -->
+            <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100 uppercase text-slate-700 font-black text-[11px] tracking-wider border-b border-slate-300">
+                            <tr>
+                                <th class="p-3.5">Book & Copy Code</th>
+                                <th class="p-3.5">Borrower / Patron</th>
+                                <th class="p-3.5">Branch</th>
+                                <th class="p-3.5">Issue & Due Dates</th>
+                                <th class="p-3.5">Return Date</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5">Desk Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows if rows else "<tr><td colspan='7' class='p-12 text-center text-slate-400 font-medium'>No circulation loan records found matching your filters.</td></tr>"}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </body>
+    </html>
+    """)
+
+@router.post("/loans/{trans_id}/receive")
+async def receive_returned_book(
+    trans_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Transaction, Notification
+    from datetime import datetime
+
+    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+    if not tx:
+        return JSONResponse(status_code=404, content={"error": "Loan record not found"})
+
+    tx.status = "returned"
+    tx.return_date = datetime.utcnow()
+    
+    if tx.book_copy:
+        tx.book_copy.status = "available"
+
+    # Send confirmation notification to patron
+    try:
+        book_title = tx.book_copy.book.title if (tx.book_copy and tx.book_copy.book) else "Book"
+        notif = Notification(
+            user_id=tx.patron_id,
+            title="Book Return Received! 🟢",
+            message=f"Your return for '{book_title}' has been processed and received at the library desk.",
+            type="success"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[RETURN NOTIF WARNING] {ex}")
+
+    db.commit()
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": f"Successfully received returned book '{book_title}'!"})
+
+    return RedirectResponse(url="/librarian/loans", status_code=303)
+
+@router.post("/loans/{trans_id}/extend")
+async def extend_loan_due_date(
+    trans_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Transaction, Notification
+    from datetime import timedelta
+
+    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+    if not tx:
+        return JSONResponse(status_code=404, content={"error": "Loan record not found"})
+
+    # Extend due date by +7 days
+    tx.due_date = tx.due_date + timedelta(days=7)
+    if tx.status == "overdue":
+        tx.status = "active"
+
+    try:
+        book_title = tx.book_copy.book.title if (tx.book_copy and tx.book_copy.book) else "Book"
+        notif = Notification(
+            user_id=tx.patron_id,
+            title="Loan Due Date Extended! 📅",
+            message=f"Due date for '{book_title}' extended by +7 days to {tx.due_date.strftime('%Y-%m-%d')}.",
+            type="info"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[EXTEND NOTIF WARNING] {ex}")
+
+    db.commit()
+
+@router.post("/loans/{trans_id}/waive-fine")
+async def waive_loan_fine(
+    trans_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian)
+):
+    from app.models import Transaction, Notification
+
+    tx = db.query(Transaction).filter(Transaction.id == trans_id).first()
+    if not tx:
+        return JSONResponse(status_code=404, content={"error": "Loan record not found"})
+
+    old_fine = tx.fine_amount or 0.0
+    tx.fine_amount = 0.00
+    if tx.status == "overdue":
+        tx.status = "active"
+
+    try:
+        b_title = tx.book_copy.book.title if (tx.book_copy and tx.book_copy.book) else "Book"
+        notif = Notification(
+            user_id=tx.patron_id,
+            title="Overdue Fine Waived 🎁",
+            message=f"Your overdue fine of GHS {old_fine:.2f} for '{b_title}' has been waived by the librarian desk.",
+            type="success"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[WAIVE NOTIF WARNING] {ex}")
+
+    db.commit()
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": f"Successfully waived fine of GHS {old_fine:.2f} for '{b_title}'!"})
+
+    return RedirectResponse(url="/librarian/loans", status_code=303)

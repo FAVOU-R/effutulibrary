@@ -25,6 +25,21 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+            <!-- Araba AI Audio Reader Controls -->
+            <div class="flex items-center bg-emerald-950 border border-emerald-500/50 rounded-xl p-1 text-xs space-x-1 shadow-md">
+                <button id="araba-speech-play-btn" onclick="toggleArabaSpeech()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
+                    <i class="fa-solid fa-volume-high text-xs"></i> <span id="araba-speech-label">Listen (Araba AI Voice)</span>
+                </button>
+                <select id="araba-speech-rate" onchange="changeSpeechRate()" class="bg-slate-900 text-emerald-300 font-bold text-xs border border-emerald-700 rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-400">
+                    <option value="1.0">1.0x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                </select>
+                <button onclick="stopArabaSpeech()" class="p-1.5 text-rose-400 hover:text-rose-300 font-bold" title="Stop Reading">
+                    <i class="fa-solid fa-square text-xs"></i>
+                </button>
+            </div>
+
             <!-- Font Controls & Dark/Light Mode -->
             <div class="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 space-x-1 text-xs">
                 <button onclick="changeFontSize(-1)" class="p-1.5 hover:text-emerald-400 text-slate-300 font-bold" title="Decrease Font Size">A-</button>
@@ -312,6 +327,80 @@ async function confirmHardcopyBorrow(bookId) {
     } catch(e) {
         msgDiv.className = "text-xs p-2.5 rounded-xl font-bold bg-rose-100 text-rose-800 border border-rose-300";
         msgDiv.textContent = "Error initiating physical borrow";
+    }
+}
+
+// Araba AI Voice Reader (Web Speech API Integration)
+let currentSpeechUtterance = null;
+let isSpeaking = false;
+
+function toggleArabaSpeech() {
+    if (!('speechSynthesis' in window)) {
+        alert("Web Speech API is not supported in this browser. Please use Chrome or Edge for Araba AI Voice.");
+        return;
+    }
+
+    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+        window.speechSynthesis.pause();
+        document.getElementById('araba-speech-label').textContent = "Resume Araba AI";
+        return;
+    } else if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+        document.getElementById('araba-speech-label').textContent = "Pause Araba AI";
+        return;
+    }
+
+    // Get current active page text
+    const activePageEl = document.querySelector('.book-page:not(.hidden)');
+    const textToRead = activePageEl ? activePageEl.innerText : document.getElementById('book-content-body').innerText;
+
+    if (!textToRead || !textToRead.trim()) {
+        alert("No readable text found on current page.");
+        return;
+    }
+
+    window.speechSynthesis.cancel(); // Clear any previous queue
+    const utter = new SpeechSynthesisUtterance(textToRead.trim());
+    const rate = parseFloat(document.getElementById('araba-speech-rate').value || "1.0");
+    utter.rate = rate;
+    utter.pitch = 1.0;
+
+    // Pick a natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const prefVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Female')));
+    if (prefVoice) utter.voice = prefVoice;
+
+    utter.onstart = () => {
+        isSpeaking = true;
+        document.getElementById('araba-speech-label').textContent = "Pause Araba AI";
+    };
+
+    utter.onend = () => {
+        isSpeaking = false;
+        document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
+    };
+
+    utter.onerror = (e) => {
+        console.error("Speech Synthesis Error:", e);
+        isSpeaking = false;
+        document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
+    };
+
+    window.speechSynthesis.speak(utter);
+}
+
+function changeSpeechRate() {
+    if (window.speechSynthesis.speaking) {
+        stopArabaSpeech();
+        toggleArabaSpeech();
+    }
+}
+
+function stopArabaSpeech() {
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
     }
 }
 

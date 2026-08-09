@@ -88,6 +88,8 @@ class Book(Base):
     pub_year = Column(Integer, nullable=True)
     pages = Column(Integer, nullable=True)
     category = Column(String(100), default="General")
+    shelf_location = Column(String(100), default="Shelf 1A - General Collection")
+    call_number = Column(String(50), nullable=True)
     cover_url = Column(Text, nullable=True)
     description = Column(Text, nullable=True)
     content_text = Column(Text, nullable=True)
