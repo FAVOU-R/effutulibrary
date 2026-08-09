@@ -66,85 +66,21 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-def send_email_sync(to_email: str, subject: str, body_html: str):
-    if not to_email or "@" not in to_email:
-        return False
-    try:
-        smtp_server = os.getenv("EMAIL_HOST") or os.getenv("MAIL_SERVER") or os.getenv("BREVO_SMTP_SERVER") or os.getenv("SMTP_SERVER") or "smtp-relay.brevo.com"
-        smtp_port = int(os.getenv("EMAIL_PORT") or os.getenv("MAIL_PORT") or os.getenv("BREVO_SMTP_PORT") or 587)
-        smtp_pass = os.getenv("EMAIL_PASS") or os.getenv("MAIL_PASSWORD") or os.getenv("BREVO_SMTP_PASSWORD") or os.getenv("SMTP_PASS") or os.getenv("BREVO_KEY") or ""
-        smtp_user = os.getenv("EMAIL_USER") or os.getenv("MAIL_USERNAME") or os.getenv("BREVO_SMTP_USER") or os.getenv("SMTP_USER") or os.getenv("EMAIL_FROM") or ""
-        sender_email = os.getenv("EMAIL_FROM") or os.getenv("SENDER_EMAIL") or smtp_user or "effutulibrarynetwork@gmail.com"
-
-        if not smtp_pass:
-            print(f"[EMAIL NOT SENT - MISSING CREDENTIALS] To: {to_email} | Subject: {subject} | Please ensure EMAIL_PASS or Brevo SMTP Key is set in Render Environment Variables.")
-            return False
-
-        if not smtp_user:
-            smtp_user = sender_email
-
-        msg = MIMEText(body_html, 'html')
-        msg['Subject'] = subject
-        msg['From'] = f"Effutu Library Network <{sender_email}>"
-        msg['To'] = to_email
-
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=12)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-        server.quit()
-        print(f"[EMAIL DISPATCH SUCCESS] Sent email to {to_email} via {smtp_server}")
-        return True
-    except Exception as e:
-        print(f"[EMAIL DISPATCH ERROR] Failed to send email to {to_email}: {e}")
-        return False
-
-def send_email(to_email: str, subject: str, body_html: str):
-    import threading
-    threading.Thread(target=send_email_sync, args=(to_email, subject, body_html), daemon=True).start()
-    return True
+from app.services.email_service import send_email, send_email_sync
 
 @router.get("/test-email")
 async def test_email_endpoint(to: str):
-    """Diagnostic endpoint to test SMTP email dispatch and view exact error message"""
+    """Diagnostic endpoint to test Brevo SMTP email dispatch"""
     if not to or "@" not in to:
-        return JSONResponse(status_code=400, content={"error": "Invalid target email address. Pass ?to=your_email@gmail.com"})
+        return JSONResponse(status_code=400, content={"error": "Invalid email. Pass ?to=your_email@gmail.com"})
     
-    smtp_server = os.getenv("EMAIL_HOST") or os.getenv("MAIL_SERVER") or os.getenv("BREVO_SMTP_SERVER") or os.getenv("SMTP_SERVER") or "smtp-relay.brevo.com"
-    smtp_port = int(os.getenv("EMAIL_PORT") or os.getenv("MAIL_PORT") or os.getenv("BREVO_SMTP_PORT") or 587)
-    smtp_pass = os.getenv("EMAIL_PASS") or os.getenv("MAIL_PASSWORD") or os.getenv("BREVO_SMTP_PASSWORD") or os.getenv("SMTP_PASS") or os.getenv("BREVO_KEY") or ""
-    smtp_user = os.getenv("EMAIL_USER") or os.getenv("MAIL_USERNAME") or os.getenv("BREVO_SMTP_USER") or os.getenv("SMTP_USER") or os.getenv("EMAIL_FROM") or ""
-    sender_email = os.getenv("EMAIL_FROM") or os.getenv("SENDER_EMAIL") or smtp_user or "effutulibrarynetwork@gmail.com"
-
-    if not smtp_pass:
-        return JSONResponse(status_code=400, content={
-            "success": False,
-            "error": "EMAIL_PASS environment variable is missing or empty. Please set EMAIL_PASS in Render Environment Variables."
-        })
-
-    try:
-        msg = MIMEText("<h3>Effutu Library System Test Email</h3><p>Your Brevo/SMTP credentials are working properly!</p>", 'html')
-        msg['Subject'] = "Effutu Library SMTP Test"
-        msg['From'] = f"Effutu Library Network <{sender_email}>"
-        msg['To'] = to
-
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=12)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-        server.quit()
-        return {"success": True, "message": f"Test email sent successfully to {to} via {smtp_server}:{smtp_port}"}
-    except Exception as e:
+    success = send_email_sync(to, "Effutu Library Brevo Test", "<h3>Brevo Port 2525 Email Test</h3><p>Your Brevo configuration is working perfectly!</p>")
+    if success:
+        return {"success": True, "message": f"Brevo test email sent successfully to {to} via Port 2525."}
+    else:
         return JSONResponse(status_code=500, content={
             "success": False,
-            "error": str(e),
-            "diagnostics": {
-                "smtp_server": smtp_server,
-                "smtp_port": smtp_port,
-                "smtp_user": smtp_user,
-                "sender_email": sender_email,
-                "has_pass": bool(smtp_pass)
-            }
+            "error": "Failed to send Brevo email. Please check server logs or ensure BREVO_SMTP_KEY is set in Render Environment Variables."
         })
 
 @router.get("/register", response_class=HTMLResponse)
@@ -820,21 +756,27 @@ async def forgot_post(
     db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.email == email.lower().strip()).first()
-    reset_link_html = ""
     if user:
         token = create_access_token({"sub": str(user.id), "type": "reset"}, expires_delta=timedelta(minutes=15))
         base_url = str(request.base_url).rstrip('/')
         reset_link = f"{base_url}/auth/reset-password?token={token}"
         
         email_body = f"""
-        <p>Dear {user.full_name},</p>
-        <p>You requested a password reset for your Effutu Municipal Library account.</p>
-        <p><a href='{reset_link}'>Click here to reset your password</a></p>
-        <p>Link: {reset_link}</p>
-        <p>This link expires in 15 minutes.</p>
+        <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; color: #1e293b;">
+            <h2 style="color: #047857; margin-top: 0;">Password Reset Request 🔑</h2>
+            <p>Akwaaba <b>{user.full_name}</b>,</p>
+            <p>You requested a password reset for your <b>Effutu Municipal Library Network</b> account.</p>
+            <p>Click the secure button below to choose a new password:</p>
+            <div style="margin: 20px 0;">
+                <a href='{reset_link}' style="background-color: #047857; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; display: inline-block;">Reset Password Now</a>
+            </div>
+            <p style="font-size: 12px; color: #64748b;">Or copy this link into your browser: <br><a href='{reset_link}' style="color: #0284c7; word-break: break-all;">{reset_link}</a></p>
+            <p style="font-size: 12px; color: #dc2626; margin-top: 16px;">This link is valid for 15 minutes. If you did not request a password reset, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+            <p style="font-size: 11px; color: #94a3b8; text-align: center;">Effutu Municipal Library Network • Winneba, Ghana</p>
+        </div>
         """
-        send_email(user.email, "Effutu Library - Password Reset Request", email_body)
-        reset_link_html = f"<div style='margin-top:15px; padding:12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; font-size:13px;'><b>Demo Link:</b> <a href='{reset_link}' style='word-break:break-all;'>{reset_link}</a></div>"
+        send_email(user.email, "🔑 Password Reset Request — Effutu Municipal Library Network", email_body)
 
     return HTMLResponse(f"""
     <!DOCTYPE html>
@@ -846,10 +788,14 @@ async def forgot_post(
     </head>
     <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
         <div class="max-w-md w-full bg-white border border-slate-200 rounded-xl shadow-lg p-6 text-center space-y-4">
-            <h2 class="text-xl font-extrabold text-slate-800">Password Reset Requested</h2>
-            <p class="text-xs text-slate-600">If an account exists for {email}, a reset link has been dispatched.</p>
-            {reset_link_html}
-            <a href="/auth/login" class="inline-block px-4 py-2 bg-emerald-700 text-white font-bold rounded-lg text-xs">Return to Login</a>
+            <div class="inline-flex items-center justify-center w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full mb-1">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            </div>
+            <h2 class="text-xl font-extrabold text-slate-800">Password Reset Email Dispatched</h2>
+            <p class="text-xs text-slate-600 leading-relaxed">If an account exists for <strong class="text-slate-800">{email}</strong>, a secure password reset link has been sent directly to that inbox. Please check your email inbox and spam folder.</p>
+            <div class="pt-2">
+                <a href="/auth/login" class="inline-block px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs shadow transition">← Return to Login</a>
+            </div>
         </div>
     </body>
     </html>
