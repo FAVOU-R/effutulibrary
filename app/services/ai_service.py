@@ -314,6 +314,7 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
         return "Akwaaba! GROQ_API_KEY is not configured on Render environment. Please set GROQ_API_KEY to enable Araba AI."
 
     from datetime import datetime
+    import re
     now_str = datetime.utcnow().strftime('%A, %B %d, %Y at %H:%M:%S UTC')
 
     stats = get_live_stats(db)
@@ -328,8 +329,8 @@ CURRENT SYSTEM DATE & TIME: {now_str}
 
 SYSTEM CAPABILITIES & REAL-TIME WEB ACCESS:
 1. REAL-TIME SYSTEM TIME: You ALWAYS know the current date and time ({now_str}). State the current date/time directly when asked.
-2. LIVE INTERNET WEB SEARCH (`web_search` tool): When asked about latest news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, sports, or live internet topics, YOU MUST IMMEDIATELY CALL THE `web_search` TOOL.
-   - CRITICAL: NEVER say "I don't have real-time access to the current time" or "Would you like me to search for you?". Always call the tool immediately or provide the current date/time directly.
+2. LIVE INTERNET WEB SEARCH (`web_search` tool): When asked about current leaders (e.g. US President, Ghana President), breaking news, WASSCE/BECE examination timetables, WAEC updates, current events, weather, sports, or general knowledge, YOU MUST CALL THE `web_search` TOOL.
+   - CRITICAL RULE: NEVER output literal text like "web_search : query" or "I'll need to do a web search". Just call the tool silently or state the answer cleanly in friendly natural language.
 3. BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
 
 Active Session User: {user_name} (Role: {user_role})
@@ -405,9 +406,31 @@ SECURITY & PRIVACY RULES:
                 messages=messages,
                 max_tokens=500
             )
-            return second_response.choices[0].message.content
+            ans = second_response.choices[0].message.content or ""
+        else:
+            ans = response_message.content or "Akwaaba! How can I assist you with Effutu Library resources today?"
 
-        return response_message.content or "Akwaaba! How can I assist you with Effutu Library resources today?"
+        # Intercept & execute any text-hallucinated web_search requests
+        match = re.search(r'web_search\s*[:\(]\s*["\']?([^"\']+)["\']?\)?', ans, re.IGNORECASE)
+        if match:
+            search_query = match.group(1).strip()
+            search_res = web_search_online(search_query)
+            messages.append({"role": "assistant", "content": ans})
+            messages.append({"role": "user", "content": f"Web search results for '{search_query}': {json.dumps(search_res)}. Answer my original question directly in friendly prose without mentioning tool names."})
+            try:
+                final_res = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=messages,
+                    max_tokens=500
+                )
+                ans = final_res.choices[0].message.content or ""
+            except Exception:
+                if search_res and isinstance(search_res, list) and len(search_res) > 0:
+                    ans = f"Akwaaba! {search_res[0].get('snippet', '')}"
+
+        # Clean out any lingering raw tool syntax line artifacts
+        ans = re.sub(r'web_search\s*[:\(].*?(\n|$)', '', ans, flags=re.IGNORECASE).strip()
+        return ans or "Akwaaba! How can I assist you today at the Effutu Municipal Library Network?"
 
     except ImportError:
         return "Groq package not installed. Please run `pip install groq`."
