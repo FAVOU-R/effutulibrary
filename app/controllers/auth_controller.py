@@ -871,7 +871,25 @@ async def logout():
     return resp
 
 @router.get("/reset-admin")
-def reset_admin_credentials():
+def reset_admin_credentials(
+    secret: str = "",
+    request: Request = None,
+    db_session: Session = Depends(get_db)
+):
+    # Security Protection Check: Block unauthenticated public triggers
+    expected_secret = os.getenv("ADMIN_RESET_SECRET", "effutu_emergency_reset_2026")
+    current_user = get_current_user_optional(request, db_session) if request else None
+
+    is_sys_admin = current_user and current_user.role == "sys_admin"
+    is_valid_secret = secret and secret == expected_secret
+
+    if not is_sys_admin and not is_valid_secret:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "error": "🔒 ACCESS DENIED: Public emergency reset is disabled for security. You must pass ?secret=YOUR_EMERGENCY_SECRET or be logged in as System Admin."
+            }
+        )
     import traceback
     from sqlalchemy import text
     from app.database import engine, SessionLocal
@@ -912,10 +930,11 @@ def reset_admin_credentials():
     db = SessionLocal()
     try:
         creds = [
-            ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
-            ("librarian@effutu.edu.gh", "librarian", "Librarian@123", "GHA-000000001-0"),
+            ("hqadmin@effutulibrary.gov.gh", "hq_admin", "admin123", "GHA-000000002-2"),
             ("sysadmin@effutulibrary.gov.gh", "sys_admin", "admin123", "GHA-000000001-1"),
-            ("librarian@effutulibrary.gov.gh", "librarian", "admin123", "GHA-000000003-3")
+            ("librarian@effutulibrary.gov.gh", "librarian", "admin123", "GHA-000000003-3"),
+            ("admin@effutu.edu.gh", "sys_admin", "Admin@123", "GHA-000000000-0"),
+            ("librarian@effutu.edu.gh", "librarian", "Librarian@123", "GHA-000000001-0")
         ]
         result = []
         for email, role, plain, gha in creds:
@@ -931,6 +950,8 @@ def reset_admin_credentials():
                     is_active=True,
                     must_change_password=False,
                     is_physically_verified=True,
+                    failed_login_attempts=0,
+                    locked_until=None,
                     hashed_password=hashed
                 )
                 db.add(user)
@@ -941,6 +962,8 @@ def reset_admin_credentials():
                 user.is_approved = True
                 user.must_change_password = False
                 user.is_physically_verified = True
+                user.failed_login_attempts = 0
+                user.locked_until = None
                 user.ghana_card_number = gha
                 db.commit()
                 result.append(f"Reset {email} / {plain}")

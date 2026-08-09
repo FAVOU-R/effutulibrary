@@ -105,12 +105,14 @@ async def list_users(
                     {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-xl text-xs shadow-sm transition inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
                 </div>
                 <div class='flex items-center gap-1.5'>
+                    {f'''
                     <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
                         <button class='px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs shadow-sm transition'><i class='fa-solid fa-key text-xs mr-1'></i> Reset Pwd</button>
                     </form>
                     <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
                         <button class='px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-xl text-xs shadow-sm transition'><i class='fa-solid fa-id-card text-xs mr-1'></i> Desk Reset</button>
                     </form>
+                    ''' if (current_user.role in ['sys_admin', 'hq_admin', 'admin'] or u.role in ['patron', 'user']) else '<span class="text-[11px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded">Admin Protected</span>'}
                     <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
                         <button class='px-2.5 py-1.5 bg-slate-200 hover:bg-rose-600 hover:text-white text-slate-700 font-extrabold rounded-xl text-xs shadow-sm transition' title="Delete User"><i class='fa-solid fa-trash-can'></i></button>
                     </form>
@@ -645,6 +647,21 @@ async def reset_pwd(
             return JSONResponse(status_code=404, content={"error": "User not found"})
         return HTMLResponse("<h3>User not found</h3>", status_code=404)
 
+    # Role Hierarchy Enforcement:
+    # 1. Branch Librarians CAN ONLY reset passwords for Patrons/Students.
+    # 2. Branch Librarians CANNOT reset passwords for sys_admin, hq_admin, or other librarians.
+    if current_user.role == "librarian" and u.role in ["sys_admin", "hq_admin", "admin", "librarian"] and u.id != current_user.id:
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse(status_code=403, content={"error": "🔒 Permission Denied: Librarians can only reset patron/student passwords."})
+        return HTMLResponse("""
+        <div style='max-width:450px; margin:50px auto; font-family:sans-serif; text-align:center; border:1px solid #fca5a5; padding:24px; border-radius:12px; background:#fff5f5;'>
+            <h3 style='color:#dc2626;'>🔒 Security Permission Denied</h3>
+            <p style='color:#4b5563; font-size:14px;'>Branch Librarians can ONLY reset passwords for <b>Patrons and Students</b>.</p>
+            <p style='font-size:12px; color:#6b7280;'>Administrative accounts (HQ Admin & Sys Admin) can only be managed by HQ Admins or via Self-Service Email Reset.</p>
+            <a href='/librarian/users' style='display:inline-block; margin-top:15px; padding:8px 16px; background:#dc2626; color:white; border-radius:6px; text-decoration:none; font-weight:bold; font-size:12px;'>← Back to User Management</a>
+        </div>
+        """, status_code=403)
+
     try:
         q_mode = request.query_params.get("mode")
         if q_mode:
@@ -658,6 +675,8 @@ async def reset_pwd(
     temp_pwd = f"Effutu@{random.randint(1000, 9999)}"
     u.hashed_password = get_password_hash(temp_pwd)
     u.must_change_password = True
+    u.failed_login_attempts = 0
+    u.locked_until = None
     db.commit()
 
     base_url = str(request.base_url).rstrip('/')
