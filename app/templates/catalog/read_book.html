@@ -175,54 +175,37 @@ function parseBookPages() {
     const chapterSplits = rawText.split(/(?=(?:CHAPTER|ACT|SECTION|LESSON|UNIT|COLLECTION)\s+\d+)/i).map(ch => ch.trim()).filter(ch => ch.length > 0);
 
     bookPages = [];
-    const pagesPerChapter = Math.max(1, Math.floor(officialTotalPages / (chapterSplits.length || 1)));
 
-    chapterSplits.forEach((chText, chIdx) => {
-        const lines = chText.split('\n');
-        const header = lines[0] || `CHAPTER ${chIdx + 1}`;
-        const bodyLines = lines.slice(1).join('\n');
-
-        // Divide chapter body evenly across allocated pages for this chapter
-        const chunkSize = Math.max(120, Math.ceil(bodyLines.length / pagesPerChapter));
-
-        for (let p = 0; p < pagesPerChapter; p++) {
-            const pageNum = bookPages.length + 1;
-            if (pageNum > officialTotalPages) break;
-
-            const startIdx = p * chunkSize;
-            const endIdx = (p === pagesPerChapter - 1) ? bodyLines.length : (p + 1) * chunkSize;
-            const pageSnippet = bodyLines.substring(startIdx, endIdx).trim();
-
-            const formattedPage = `${header}  (Page ${pageNum} of ${officialTotalPages})\n` +
-                `--------------------------------------------------------------------------------\n\n` +
-                (pageSnippet || `${header} — Continued study material, diagrams, and notes for Page ${pageNum}.`);
-
-            bookPages.push(formattedPage);
+    if (chapterSplits.length > 1) {
+        chapterSplits.forEach((chText, idx) => {
+            if (chText.length > 0) {
+                bookPages.push(chText);
+            }
+        });
+    } else {
+        const pageSize = 600;
+        for (let i = 0; i < rawText.length; i += pageSize) {
+            const pageText = rawText.substring(i, i + pageSize).trim();
+            if (pageText.length > 0) {
+                bookPages.push(pageText);
+            }
         }
-    });
-
-    // Fill remaining pages up to official total author page count if any gap remains
-    while (bookPages.length < officialTotalPages) {
-        const pageNum = bookPages.length + 1;
-        const lastCh = chapterSplits[(pageNum - 1) % chapterSplits.length] || `SECTION ${pageNum}`;
-        const firstLine = lastCh.split('\n')[0];
-        bookPages.push(
-            `${firstLine}  (Page ${pageNum} of ${officialTotalPages})\n` +
-            `--------------------------------------------------------------------------------\n\n` +
-            `Official Page ${pageNum} of '${document.title.replace('- Effutu Municipal Library Network', '').trim()}'.\n` +
-            `Continuing reference text, exercises, and study notes for Chapter ${Math.floor(pageNum / pagesPerChapter) + 1}.`
-        );
     }
+
+    if (bookPages.length === 0) {
+        bookPages = ["Page 1 content unavailable."];
+    }
+
+    const totalPages = bookPages.length;
 
     // Update Chapter Selector options
     const select = document.getElementById('chapter-select');
-    select.innerHTML = chapterSplits.map((ch, idx) => {
-        const titleLine = ch.split('\n')[0].substring(0, 32);
-        const targetPageIdx = Math.min(idx * pagesPerChapter, bookPages.length - 1);
-        return `<option value="${targetPageIdx}">${titleLine} (p. ${targetPageIdx + 1})</option>`;
+    select.innerHTML = bookPages.map((pg, idx) => {
+        const titleLine = pg.split('\n')[0].substring(0, 35);
+        return `<option value="${idx}">Page ${idx + 1}: ${titleLine}</option>`;
     }).join('');
 
-    document.getElementById('page-total-label').textContent = `of ${officialTotalPages}`;
+    document.getElementById('page-total-label').textContent = `of ${totalPages}`;
     renderPage(0);
 }
 
@@ -230,17 +213,20 @@ function renderPage(pageIdx) {
     if (pageIdx < 0 || pageIdx >= bookPages.length) return;
     currentPage = pageIdx;
 
+    const totalPages = bookPages.length;
+
     document.getElementById('book-content-body').innerText = bookPages[currentPage];
     document.getElementById('page-num-input').value = currentPage + 1;
-    document.getElementById('page-total-label').textContent = `of ${officialTotalPages}`;
-    document.getElementById('page-indicator-bottom').textContent = `Page ${currentPage + 1} of ${officialTotalPages}`;
+    document.getElementById('page-total-label').textContent = `of ${totalPages}`;
+    document.getElementById('page-indicator-bottom').textContent = `Page ${currentPage + 1} of ${totalPages}`;
 
-    const progressPct = Math.round(((currentPage + 1) / officialTotalPages) * 100);
+    const progressPct = Math.round(((currentPage + 1) / totalPages) * 100);
     document.getElementById('reading-progress-text').textContent = `Reading Progress: ${progressPct}%`;
     document.getElementById('reading-progress-bar').style.width = `${progressPct}%`;
 
     document.getElementById('prev-page-btn').disabled = (currentPage === 0);
-    document.getElementById('next-page-btn').disabled = (currentPage === bookPages.length - 1);
+    document.getElementById('next-page-btn').disabled = (currentPage === totalPages - 1);
+    document.getElementById('chapter-select').value = currentPage;
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }

@@ -116,11 +116,20 @@
                 <tbody class="divide-y divide-slate-100">
                     {% for t in active_loans %}
                     <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3.5 font-bold text-slate-900">{{ t.book_title }}</td>
+                        <td class="p-3.5 font-bold text-slate-900 flex items-center gap-2">
+                            {% if t.type == 'Reservation' %}
+                                <span class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[9px] font-black px-2 py-0.5 rounded uppercase">RESERVED</span>
+                            {% else %}
+                                <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 text-[9px] font-black px-2 py-0.5 rounded uppercase">LOAN</span>
+                            {% endif %}
+                            <span>{{ t.book_title }}</span>
+                        </td>
                         <td class="p-3.5 font-mono text-slate-600">{{ t.issue_date }}</td>
                         <td class="p-3.5 font-mono font-bold text-slate-900">{{ t.due_date }}</td>
                         <td class="p-3.5">
-                            {% if t.is_overdue %}
+                            {% if t.type == 'Reservation' %}
+                                <span class="bg-indigo-100 text-indigo-900 border border-indigo-300 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Reserved (Hold at Branch Desk)</span>
+                            {% elif t.is_overdue %}
                                 <span class="bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">OVERDUE (Fine: GHS {{ "%.2f"|format(t.fine_amount_ghs) }})</span>
                             {% else %}
                                 <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Active (On Schedule)</span>
@@ -131,7 +140,7 @@
                     <tr>
                         <td colspan="4" class="p-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-book-open text-2xl mb-2 text-slate-300 block"></i>
-                            You currently have no active book loans. Browse catalog below to borrow!
+                            You currently have no active book loans or physical branch reservations. Browse catalog below to borrow or reserve!
                         </td>
                     </tr>
                     {% endfor %}

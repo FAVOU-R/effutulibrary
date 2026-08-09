@@ -291,18 +291,41 @@ def role_dashboard(role: str, request: Request, db: Session = Depends(get_db)):
 
     # 4. Patron View
     elif role == "patron":
+        import datetime
         active_loans = db.query(Transaction).filter(
             Transaction.patron_id == current_user.id,
             Transaction.status.in_(["active", "overdue"])
         ).all()
         loans_data = [{
             "id": t.id,
-            "book_title": t.book_copy.book.title,
+            "book_title": t.book_copy.book.title if t.book_copy and t.book_copy.book else "Library Book",
             "issue_date": t.issue_date.strftime("%Y-%m-%d"),
             "due_date": t.due_date.strftime("%Y-%m-%d"),
             "is_overdue": t.status == "overdue",
-            "fine_amount_ghs": t.fine_amount
+            "fine_amount_ghs": t.fine_amount or 0.0,
+            "type": "Loan"
         } for t in active_loans]
+
+        # Include active reservations (reserved, pending, ready)
+        from app.models import Reservation
+        active_res = db.query(Reservation).filter(
+            Reservation.user_id == current_user.id,
+            Reservation.status.in_(["reserved", "pending", "ready"])
+        ).all()
+
+        for r in active_res:
+            res_date = r.reserved_at.strftime("%Y-%m-%d") if r.reserved_at else "Today"
+            exp_date = r.expires_at.strftime("%Y-%m-%d") if r.expires_at else (r.reserved_at + datetime.timedelta(days=2)).strftime("%Y-%m-%d")
+            loans_data.append({
+                "id": f"res-{r.id}",
+                "book_title": r.book.title if r.book else "Reserved Book",
+                "issue_date": res_date,
+                "due_date": f"{exp_date} (Pick-Up Hold)",
+                "is_overdue": False,
+                "fine_amount_ghs": 0.0,
+                "type": "Reservation",
+                "status": r.status.upper()
+            })
 
         return templates.TemplateResponse(request=request, name="dashboards/patron.html", context={
             "current_user": current_user,
