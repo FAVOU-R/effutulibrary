@@ -41,6 +41,7 @@ class User(Base):
     verified_at = Column(DateTime, nullable=True)
     rejection_reason = Column(Text, nullable=True)
     id_photo_url = Column(String(255), nullable=True)
+    profile_picture_url = Column(String(255), nullable=True)
     guardian_name = Column(String(150), nullable=True)
     guardian_phone = Column(String(50), nullable=True)
     guardian_email = Column(String(150), nullable=True)
@@ -54,13 +55,21 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     @property
+    def avatar_url(self):
+        if self.profile_picture_url and self.profile_picture_url.strip():
+            return self.profile_picture_url
+        if self.id_photo_url and self.id_photo_url.strip():
+            return self.id_photo_url
+        return None
+
+    @property
     def display_username(self):
         if self.username:
             return f"@{self.username.lstrip('@')}"
-        if self.member_id:
-            return self.member_id
         if self.email:
             return f"@{self.email.split('@')[0]}"
+        if self.member_id:
+            return f"@{self.member_id.lower()}"
         return f"@{self.full_name.lower().replace(' ', '_')}"
 
 

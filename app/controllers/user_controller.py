@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Form, Request
+from fastapi import APIRouter, Depends, HTTPException, Form, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Branch
 from app.controllers.auth_controller import get_current_user, get_password_hash, send_email
-import random, os
+import random, os, uuid
 
 router = APIRouter(prefix="/api/users", tags=["User Management"])
 
@@ -116,4 +116,71 @@ async def create_staff(
     return JSONResponse(content={
         "message": f"Staff account provisioned successfully for {full_name.strip()} ({role_clean.replace('_', ' ').title()})!",
         "member_id": member_id
+    })
+
+
+@router.post("/profile/picture")
+async def update_profile_picture(
+    request: Request,
+    profile_picture: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not profile_picture or not profile_picture.filename:
+        return JSONResponse(status_code=400, content={"error": "No image file provided."})
+    
+    ext = os.path.splitext(profile_picture.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
+        return JSONResponse(status_code=400, content={"error": "Supported image formats: .jpg, .png, .webp, .gif"})
+    
+    upload_dir = os.path.join("app", "static", "uploads", "profile_pictures")
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    file_path = os.path.join(upload_dir, filename)
+    
+    with open(file_path, "wb") as buffer:
+        buffer.write(await profile_picture.read())
+        
+    rel_url = f"/static/uploads/profile_pictures/{filename}"
+    current_user.profile_picture_url = rel_url
+    db.commit()
+    db.refresh(current_user)
+    
+    return JSONResponse(content={
+        "message": "Profile picture updated successfully!",
+        "profile_picture_url": rel_url
+    })
+
+
+@router.post("/profile/update")
+async def update_profile_details(
+    request: Request,
+    username: str = Form(None),
+    full_name: str = Form(None),
+    phone: str = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    import re
+    if username and username.strip():
+        clean_user = username.strip().lower().lstrip('@')
+        existing = db.query(User).filter(User.username == clean_user, User.id != current_user.id).first()
+        if existing:
+            return JSONResponse(status_code=400, content={"error": f"The username '@{clean_user}' is already taken. Please choose another."})
+        current_user.username = clean_user
+        
+    if full_name and full_name.strip():
+        current_user.full_name = full_name.strip()
+        
+    if phone and phone.strip():
+        current_user.phone = phone.strip()
+        
+    db.commit()
+    db.refresh(current_user)
+    
+    return JSONResponse(content={
+        "message": "Profile details updated successfully!",
+        "username": current_user.display_username,
+        "full_name": current_user.full_name
     })

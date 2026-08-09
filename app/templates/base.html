@@ -42,12 +42,22 @@
                             <span id="notif-badge" class="hidden absolute top-1 right-1 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow">0</span>
                         </a>
 
-                        <div class="flex items-center gap-3 bg-white/10 px-3 py-1.5 rounded-xl border border-white/10">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-amber-300 font-extrabold text-xs shadow-inner">
-                                {{ current_user.full_name[0] }}
+                        <div class="flex items-center gap-3 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-xl border border-white/10 transition cursor-pointer group relative" onclick="openProfileModal()" title="Click to edit profile & change avatar">
+                            <div class="relative w-8 h-8 rounded-lg overflow-hidden bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-amber-300 font-extrabold text-xs shadow-inner shrink-0">
+                                {% if current_user.avatar_url %}
+                                    <img src="{{ current_user.avatar_url }}" id="nav-avatar-img" class="w-full h-full object-cover" alt="Avatar">
+                                {% else %}
+                                    <span id="nav-avatar-initial">{{ current_user.full_name[0] }}</span>
+                                {% endif %}
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-[10px]">
+                                    <i class="fa-solid fa-camera"></i>
+                                </div>
                             </div>
                             <div class="hidden sm:block text-left">
-                                <div class="font-extrabold text-xs text-white leading-tight">{{ current_user.full_name }}</div>
+                                <div class="font-extrabold text-xs text-white leading-tight flex items-center gap-1">
+                                    <span>{{ current_user.full_name }}</span>
+                                    <i class="fa-solid fa-pen text-[9px] text-emerald-300 opacity-0 group-hover:opacity-100 transition"></i>
+                                </div>
                                 <span class="text-[11px] text-emerald-300 font-mono font-bold tracking-wide">
                                     {{ current_user.display_username }} • {{ current_user.role.replace('_', ' ').upper() }}
                                 </span>
@@ -311,6 +321,170 @@
     }
     document.addEventListener('DOMContentLoaded', setupTablePagination);
     </script>
+
+    {% if current_user %}
+    <!-- GLOBAL PROFILE EDIT & AVATAR UPLOAD MODAL -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-200">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-emerald-800 to-teal-900 px-6 py-5 text-white relative">
+                <button onclick="closeProfileModal()" class="absolute top-4 right-4 text-emerald-200 hover:text-white bg-white/10 hover:bg-white/20 w-8 h-8 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-300 text-lg border border-white/20">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-lg leading-tight">My Profile Settings</h3>
+                        <p class="text-xs text-emerald-200">Update your avatar & handle</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-5">
+                <!-- Profile Picture Section -->
+                <div class="text-center bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                    <label class="block text-xs font-bold text-slate-700 uppercase mb-3">Profile Picture</label>
+                    <div class="relative w-24 h-24 mx-auto mb-3 rounded-2xl overflow-hidden border-2 border-emerald-500 shadow-md group">
+                        <img id="avatar-preview" src="{{ current_user.avatar_url or '' }}" class="w-full h-full object-cover {% if not current_user.avatar_url %}hidden{% endif %}" alt="Avatar">
+                        <div id="avatar-initial-badge" class="w-full h-full bg-emerald-700 text-amber-300 font-black text-3xl flex items-center justify-center {% if current_user.avatar_url %}hidden{% endif %}">
+                            {{ current_user.full_name[0] }}
+                        </div>
+                    </div>
+
+                    <form id="avatarUploadForm" class="space-y-2">
+                        <input type="file" id="profile_pic_input" name="profile_picture" accept="image/*" class="hidden" onchange="previewAndUploadAvatar(event)">
+                        <button type="button" onclick="document.getElementById('profile_pic_input').click()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition inline-flex items-center gap-2">
+                            <i class="fa-solid fa-camera"></i>
+                            <span>Upload New Picture</span>
+                        </button>
+                        <p id="avatar-msg" class="text-[11px] font-semibold text-slate-500 mt-1">Supports JPG, PNG, WEBP & GIF</p>
+                    </form>
+                </div>
+
+                <!-- Profile Info Form -->
+                <form id="profileInfoForm" onsubmit="saveProfileInfo(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Username Handle</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-mono text-sm font-bold">@</span>
+                            <input type="text" id="edit_username" name="username" value="{{ current_user.username or '' }}" placeholder="username" class="w-full pl-8 pr-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                        <input type="text" id="edit_full_name" name="full_name" value="{{ current_user.full_name }}" required class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number</label>
+                        <input type="tel" id="edit_phone" name="phone" value="{{ current_user.phone or '' }}" placeholder="024XXXXXXX" class="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm">
+                    </div>
+
+                    <div id="profile-info-alert" class="hidden p-2.5 rounded-xl text-xs font-bold text-center"></div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" onclick="closeProfileModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">Cancel</button>
+                        <button type="submit" id="btn-save-profile" class="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">Save Profile Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openProfileModal() {
+        document.getElementById('profileModal').classList.remove('hidden');
+        document.getElementById('profileModal').classList.add('flex');
+    }
+    function closeProfileModal() {
+        document.getElementById('profileModal').classList.add('hidden');
+        document.getElementById('profileModal').classList.remove('flex');
+    }
+
+    async function previewAndUploadAvatar(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const msgEl = document.getElementById('avatar-msg');
+        msgEl.className = 'text-[11px] font-semibold text-emerald-600 mt-1';
+        msgEl.textContent = 'Uploading picture...';
+
+        const formData = new FormData();
+        formData.append('profile_picture', file);
+
+        try {
+            const resp = await fetch('/api/users/profile/picture', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                msgEl.className = 'text-[11px] font-semibold text-emerald-700 mt-1';
+                msgEl.textContent = '✓ Picture updated successfully!';
+                
+                const previewImg = document.getElementById('avatar-preview');
+                const initialBadge = document.getElementById('avatar-initial-badge');
+                previewImg.src = data.profile_picture_url;
+                previewImg.classList.remove('hidden');
+                if (initialBadge) initialBadge.classList.add('hidden');
+
+                const navAvatar = document.getElementById('nav-avatar-img');
+                const navInitial = document.getElementById('nav-avatar-initial');
+                if (navAvatar) {
+                    navAvatar.src = data.profile_picture_url;
+                    navAvatar.classList.remove('hidden');
+                } else if (navInitial && navInitial.parentElement) {
+                    navInitial.parentElement.innerHTML = `<img src="${data.profile_picture_url}" id="nav-avatar-img" class="w-full h-full object-cover" alt="Profile Picture">`;
+                }
+            } else {
+                msgEl.className = 'text-[11px] font-semibold text-rose-600 mt-1';
+                msgEl.textContent = data.error || 'Failed to upload picture';
+            }
+        } catch (e) {
+            msgEl.className = 'text-[11px] font-semibold text-rose-600 mt-1';
+            msgEl.textContent = 'Upload error occurred';
+        }
+    }
+
+    async function saveProfileInfo(event) {
+        event.preventDefault();
+        const alertEl = document.getElementById('profile-info-alert');
+        const btn = document.getElementById('btn-save-profile');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        const formData = new FormData(document.getElementById('profileInfoForm'));
+        try {
+            const resp = await fetch('/api/users/profile/update', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+                alertEl.className = 'p-2.5 rounded-xl text-xs font-bold text-center bg-emerald-100 text-emerald-800 block';
+                alertEl.textContent = data.message;
+                setTimeout(() => {
+                    window.location.reload();
+                }, 800);
+            } else {
+                alertEl.className = 'p-2.5 rounded-xl text-xs font-bold text-center bg-rose-100 text-rose-800 block';
+                alertEl.textContent = data.error || 'Failed to save changes';
+                btn.disabled = false;
+                btn.textContent = 'Save Profile Changes';
+            }
+        } catch (e) {
+            alertEl.className = 'p-2.5 rounded-xl text-xs font-bold text-center bg-rose-100 text-rose-800 block';
+            alertEl.textContent = 'Error saving profile info';
+            btn.disabled = false;
+            btn.textContent = 'Save Profile Changes';
+        }
+    }
+    </script>
+    {% endif %}
     {% block scripts %}{% endblock %}
 </body>
 </html>

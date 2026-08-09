@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import os
 
 from app.config import settings
@@ -39,15 +41,47 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+# CORS & Security Hardening Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
 # Absolute Path Resolution for Static & Template Files
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 static_dir = os.path.join(BASE_DIR, "app", "static")
 templates_dir = os.path.join(BASE_DIR, "app", "templates")
-
-if os.path.exists(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 templates = Jinja2Templates(directory=templates_dir)
+
+# Global Custom Error Exception Handlers
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: Exception):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=404, content={"error": "Requested resource not found"})
+    user = get_current_user_optional(request, next(get_db()))
+    return templates.TemplateResponse(request=request, name="errors/404.html", context={"current_user": user}, status_code=404)
+
+@app.exception_handler(500)
+async def custom_500_handler(request: Request, exc: Exception):
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(status_code=500, content={"error": "An internal server error occurred"})
+    user = get_current_user_optional(request, next(get_db()))
+    return templates.TemplateResponse(request=request, name="errors/500.html", context={"current_user": user}, status_code=500)
 
 # Register API Routers
 app.include_router(auth_router)
@@ -102,7 +136,6 @@ def on_startup():
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_physically_verified BOOLEAN DEFAULT FALSE;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;",
         "ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMP;",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(50);",
         "ALTER TABLE reservations ADD COLUMN IF NOT EXISTS reject_reason TEXT;"
     ]
 
@@ -113,6 +146,51 @@ def on_startup():
                 conn.commit()
         except Exception:
             pass
+
+    column_additions = [
+        ("users", "username", "VARCHAR(50)"),
+        ("users", "profile_picture_url", "VARCHAR(255)"),
+    ]
+
+    with engine.connect() as conn:
+        for table, col, col_type in column_additions:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type};"))
+                conn.commit()
+            except Exception:
+                pass
+
+    # Backfill usernames for any pre-existing users without a handle
+    try:
+        from app.database import SessionLocal
+        from app.models import User
+        import re
+        db_s = SessionLocal()
+        users_to_fix = db_s.query(User).filter((User.username == None) | (User.username == '')).all()
+        if users_to_fix:
+            for u in users_to_fix:
+                if u.email:
+                    base_h = u.email.split("@")[0].lower()
+                elif u.full_name:
+                    base_h = u.full_name.strip().lower().replace(" ", "_")
+                else:
+                    base_h = f"user_{u.id}"
+                
+                base_h = re.sub(r'[^a-z0-9_]', '', base_h)
+                if not base_h:
+                    base_h = f"user_{u.id}"
+                
+                cand = base_h
+                cnt = 1
+                while db_s.query(User).filter(User.username == cand, User.id != u.id).first():
+                    cand = f"{base_h}{cnt}"
+                    cnt += 1
+                u.username = cand
+            db_s.commit()
+            print(f"[STARTUP] Automatically assigned handles for {len(users_to_fix)} existing user(s).")
+        db_s.close()
+    except Exception as ex:
+        print(f"[STARTUP WARNING] Username backfill exception: {ex}")
 
     if seed_database:
         try:
@@ -296,8 +374,20 @@ def qr_scan_page(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/health")
 @app.get("/api/health")
-def health_check():
-    return {"status": "ok", "app": "Effutu Library Network"}
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "app": "Effutu Library Network",
+            "version": settings.VERSION
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "database": str(e)}
+        )
 
 if __name__ == "__main__":
     import uvicorn
