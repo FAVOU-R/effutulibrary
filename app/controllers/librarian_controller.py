@@ -147,7 +147,7 @@ async def list_users(
 
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
+                    <table class="w-full text-left text-xs paginated-table">
                         <thead class="bg-slate-100 uppercase text-slate-500 font-bold border-b border-slate-200">
                             <tr>
                                 <th class="p-3">Member ID</th>
@@ -161,7 +161,7 @@ async def list_users(
                             </tr>
                         </thead>
                         <tbody>
-                            {rows if rows else "<tr><td colspan='8' class='p-8 text-center text-slate-400'>No users found matching your search.</td></tr>"}
+                            {rows if rows else "<tr><td colspan='8' class='p-8 text-center text-slate-400 no-paginate'>No users found matching your search.</td></tr>"}
                         </tbody>
                     </table>
                 </div>
@@ -193,6 +193,102 @@ async def list_users(
         function closeRejectModal() {{
             document.getElementById('rejectModal').classList.add('hidden');
         }}
+
+        // Inline Table Paginator for Standalone Page
+        document.addEventListener('DOMContentLoaded', function() {{
+            const tableEl = document.querySelector('table.paginated-table');
+            if (!tableEl) return;
+            const tbody = tableEl.querySelector('tbody');
+            if (!tbody) return;
+
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter(tr => !tr.classList.contains('no-paginate'));
+            if (rows.length === 0) return;
+
+            let currentPage = 1;
+            let pageSize = 5;
+
+            const headerBar = document.createElement('div');
+            headerBar.className = "flex flex-col sm:flex-row justify-between items-center gap-3 p-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-600 rounded-t-xl";
+            
+            headerBar.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-700">Show</span>
+                    <select class="page-size-select bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-emerald-800 focus:outline-none focus:border-emerald-600 shadow-sm cursor-pointer">
+                        <option value="5" selected>5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                    </select>
+                    <span class="text-slate-600">entries per page</span>
+                </div>
+                <div class="page-info-text text-slate-500 font-mono text-[11px]">
+                    Showing <span class="start-idx font-bold text-slate-800">1</span> to <span class="end-idx font-bold text-slate-800">5</span> of <span class="total-idx font-bold text-slate-800">${{rows.length}}</span> entries
+                </div>
+                <div class="pagination-controls flex items-center gap-1">
+                    <button type="button" class="btn-prev px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        <i class="fa-solid fa-chevron-left"></i> Prev
+                    </button>
+                    <span class="page-num-display px-3 py-1 font-mono font-bold text-slate-800 bg-white border border-slate-200 rounded-lg">1</span>
+                    <button type="button" class="btn-next px-2.5 py-1 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            `;
+
+            tableEl.parentNode.insertBefore(headerBar, tableEl);
+
+            function renderPage() {{
+                let actualSize = (pageSize === 'all') ? rows.length : parseInt(pageSize);
+                let totalPages = Math.ceil(rows.length / actualSize) || 1;
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                let start = (currentPage - 1) * actualSize;
+                let end = (pageSize === 'all') ? rows.length : Math.min(start + actualSize, rows.length);
+
+                rows.forEach((row, idx) => {{
+                    if (idx >= start && idx < end) {{
+                        row.style.display = '';
+                    }} else {{
+                        row.style.display = 'none';
+                    }}
+                }});
+
+                headerBar.querySelector('.start-idx').textContent = rows.length > 0 ? (start + 1) : 0;
+                headerBar.querySelector('.end-idx').textContent = end;
+                headerBar.querySelector('.total-idx').textContent = rows.length;
+                headerBar.querySelector('.page-num-display').textContent = `${{currentPage}} / ${{totalPages}}`;
+
+                headerBar.querySelector('.btn-prev').disabled = (currentPage === 1);
+                headerBar.querySelector('.btn-next').disabled = (currentPage === totalPages || totalPages === 0);
+            }}
+
+            headerBar.querySelector('.page-size-select').addEventListener('change', (e) => {{
+                pageSize = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+                currentPage = 1;
+                renderPage();
+            }});
+
+            headerBar.querySelector('.btn-prev').addEventListener('click', () => {{
+                if (currentPage > 1) {{
+                    currentPage--;
+                    renderPage();
+                }}
+            }});
+
+            headerBar.querySelector('.btn-next').addEventListener('click', () => {{
+                let actualSize = (pageSize === 'all') ? rows.length : parseInt(pageSize);
+                let totalPages = Math.ceil(rows.length / actualSize);
+                if (currentPage < totalPages) {{
+                    currentPage++;
+                    renderPage();
+                }}
+            }});
+
+            renderPage();
+        }});
         </script>
     </body>
     </html>
