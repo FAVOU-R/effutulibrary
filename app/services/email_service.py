@@ -4,14 +4,14 @@ import threading
 from email.mime.text import MIMEText
 
 def send_email_sync(to_email: str, subject: str, body_html: str) -> bool:
-    """Synchronous BREVO SMTP email dispatcher using Port 587"""
+    """Synchronous BREVO SMTP email dispatcher using Port 2525"""
     if not to_email or "@" not in to_email:
         print(f"[BREVO EMAIL CANCELLED] Invalid recipient address: {to_email}")
         return False
 
     try:
         smtp_server = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com")
-        smtp_port = int(os.getenv("BREVO_SMTP_PORT", "587"))
+        smtp_port = int(os.getenv("BREVO_SMTP_PORT", "2525"))
         smtp_login = os.getenv("BREVO_SMTP_LOGIN", "b428a1001@smtp-brevo.com")
         smtp_key = os.getenv("BREVO_SMTP_KEY", "").strip()
         sender_email = os.getenv("BREVO_SENDER_EMAIL", "effutulibrarynetwork@gmail.com")
@@ -26,7 +26,7 @@ def send_email_sync(to_email: str, subject: str, body_html: str) -> bool:
         msg['From'] = f"{sender_name} <{sender_email}>"
         msg['To'] = to_email
 
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=12)
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=15)
         server.starttls()
         server.login(smtp_login, smtp_key)
         server.send_message(msg)
