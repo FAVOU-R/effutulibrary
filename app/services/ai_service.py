@@ -321,16 +321,28 @@ def get_ai_response(message: str, db: Session = None, current_user: User = None)
     user_role = getattr(current_user, "role", "guest") if current_user else "guest"
     user_name = getattr(current_user, "full_name", "Guest") if current_user else "Guest Patron"
 
-    # Automatic Real-Time Web Search Enrichment
+    # 1. LOCAL MUNICIPAL LIBRARY DATABASE SEARCH (PRIMARY SOURCE)
+    catalog_context = ""
+    db_matches = []
+    if db:
+        try:
+            db_matches = search_books_db(db, message)
+            if db_matches:
+                catalog_context = f"\nLIVE MUNICIPAL LIBRARY CATALOG MATCHES IN LOCAL DB FOR '{message}':\n" + json.dumps(db_matches, indent=2)
+        except Exception as db_err:
+            print(f"DB catalog search warning: {db_err}")
+
+    # 2. REAL-TIME INTERNET WEB SEARCH (SECONDARY SOURCE FOR EXTERNAL WORLD QUESTIONS)
     realtime_keywords = [
         "president", "who is", "current", "latest", "news", "today", "now",
         "wassce", "bece", "waec", "timetable", "election", "weather", "sports",
         "governor", "prime minister", "minister", "champion", "winner", "leader"
     ]
     message_lower = message.lower()
-    needs_web_search = any(k in message_lower for k in realtime_keywords) or "?" in message
+    needs_web_search = any(k in message_lower for k in realtime_keywords)
 
     live_web_context = ""
+    # Perform external web search only if requested or if query asks for non-catalog world information
     if needs_web_search:
         try:
             web_results = web_search_online(message)
@@ -347,18 +359,25 @@ Akwaaba is your standard Ghanaian greeting!
 
 CURRENT SYSTEM DATE & TIME: {now_str}
 
-SYSTEM CAPABILITIES & REAL-TIME WEB ACCESS:
-1. REAL-TIME SYSTEM TIME: You ALWAYS know the current date and time ({now_str}). State the current date/time directly when asked.
-2. LIVE INTERNET WEB SEARCH RESULTS: {live_web_context or "No pre-fetched search results needed for this request."}
-3. REAL-TIME FACTUAL ACCURACY RULE:
-   - When asked about current leaders (e.g. US President, Ghana President), breaking news, current events, dates, or exams, YOU MUST BASE YOUR ANSWER ON THE LIVE REAL-TIME INTERNET SEARCH RESULTS PROVIDED ABOVE.
-   - DO NOT answer from old training memory if live internet search results indicate updated information.
-4. BOOK CATALOG SEARCH (`search_books` tool): Use to search the municipal library catalog by subject or title.
+DATA SOURCES & SEARCH PRIORITY:
+1. LOCAL MUNICIPAL LIBRARY DATABASE (PRIMARY SOURCE):
+{catalog_context or "   - No direct title/category match found in local catalog DB for this exact query term."}
+   - RULE: ALWAYS check and prioritize local library database results above when patrons ask for books, study materials, or library inventory.
+
+2. REAL-TIME INTERNET WEB SEARCH (SECONDARY / EXTERNAL SOURCE):
+{live_web_context or "   - No external web search needed/performed."}
+   - RULE: Use real-time web search results for questions about current world leaders (e.g. US President, Ghana President), breaking news, weather, or WAEC timetables.
+
+STRICT RESPONSE STYLE RULES:
+1. BE DIRECT & CONCISE: Provide clear, direct, and authoritative answers in 1 to 3 sentences maximum.
+2. ABSOLUTELY NO META-COMMENTARY: NEVER use phrases like "Based on the live real-time internet search results...", "It appears that...", "This is not explicitly confirmed...", "I would recommend checking latest news sources...", or dumping system timestamps.
+3. NO UNCERTAIN HEDGING: State facts directly and confidently without waffling or disclaimers.
+4. WARM & HELPFUL: Keep responses clean, sharp, and helpful with a friendly Ghanaian Akwaaba tone.
 
 Active Session User: {user_name} (Role: {user_role})
 
 LIVE CATALOG STATS:
-- Total books cataloged: {stats['total_books']}
+- Total books cataloged in DB: {stats['total_books']}
 - Available copies right now: {stats['available_books']}
 
 SECURITY & PRIVACY RULES:
@@ -387,14 +406,14 @@ SECURITY & PRIVACY RULES:
                 messages=messages,
                 tools=tools_schema,
                 tool_choice="auto",
-                max_tokens=500
+                max_tokens=300
             )
         except Exception as tool_err:
             print(f"[GROQ TOOL CALL RETRY WITHOUT TOOLS] Error: {tool_err}")
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages,
-                max_tokens=500
+                max_tokens=300
             )
 
         response_message = response.choices[0].message
@@ -426,32 +445,21 @@ SECURITY & PRIVACY RULES:
             second_response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=messages,
-                max_tokens=500
+                max_tokens=300
             )
             ans = second_response.choices[0].message.content or ""
         else:
             ans = response_message.content or "Akwaaba! How can I assist you with Effutu Library resources today?"
 
-        # Intercept & execute any text-hallucinated web_search requests
-        match = re.search(r'web_search\s*[:\(]\s*["\']?([^"\']+)["\']?\)?', ans, re.IGNORECASE)
-        if match:
-            search_query = match.group(1).strip()
-            search_res = web_search_online(search_query)
-            messages.append({"role": "assistant", "content": ans})
-            messages.append({"role": "user", "content": f"Web search results for '{search_query}': {json.dumps(search_res)}. Answer my original question directly in friendly prose without mentioning tool names."})
-            try:
-                final_res = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=messages,
-                    max_tokens=500
-                )
-                ans = final_res.choices[0].message.content or ""
-            except Exception:
-                if search_res and isinstance(search_res, list) and len(search_res) > 0:
-                    ans = f"Akwaaba! {search_res[0].get('snippet', '')}"
-
-        # Clean out any lingering raw tool syntax line artifacts
+        # Post-Processing: Clean out meta-commentary, hedging disclaimers, and timestamp dumps
+        ans = re.sub(r'Based on (the )?(live )?(real-time )?(internet )?search results,?\s*', '', ans, flags=re.IGNORECASE)
+        ans = re.sub(r'^it appears that\s*', '', ans, flags=re.IGNORECASE)
+        ans = re.sub(r'I would recommend checking (the )?latest news sources.*', '', ans, flags=re.IGNORECASE)
+        ans = re.sub(r'Current Date and Time:.*', '', ans, flags=re.IGNORECASE)
         ans = re.sub(r'web_search\s*[:\(].*?(\n|$)', '', ans, flags=re.IGNORECASE).strip()
+        if ans and ans[0].islower():
+            ans = ans[0].upper() + ans[1:]
+
         return ans or "Akwaaba! How can I assist you today at the Effutu Municipal Library Network?"
 
     except ImportError:
