@@ -88,29 +88,33 @@ async def list_users(
         loc_disp = u.location or branch_name
 
         rows += f"""
-        <tr class='border-b border-slate-200 hover:bg-slate-50/80 transition text-sm'>
-            <td class='p-4 font-mono font-black text-emerald-900 text-xs whitespace-nowrap'><span class='bg-emerald-50 px-2 py-1 rounded border border-emerald-200'>{u.member_id or f'ID-{u.id}'}</span></td>
-            <td class='p-4 font-black text-slate-900 text-base leading-snug'>{u.full_name}<br><span class='text-xs text-slate-600 font-bold tracking-tight block mt-0.5'>{sub_text}</span></td>
-            <td class='p-4 font-semibold text-slate-800 text-xs leading-relaxed'>{contact_disp}<br><span class='text-xs font-bold text-slate-500 block mt-0.5'>{loc_disp}</span></td>
-            <td class='p-4 text-xs'><span class='font-black text-slate-800 uppercase tracking-wider block mb-0.5'>{id_type_label}</span><span class='text-xs text-slate-700 font-mono font-bold block'>{id_disp}</span>{photo_link}</td>
-            <td class='p-4 uppercase font-black text-xs text-slate-700 tracking-wider'>{u.role.replace('_', ' ')}</td>
-            <td class='p-4'>{status_badge}</td>
-            <td class='p-4'>{v_badge}</td>
-            <td class='p-4 space-x-1 whitespace-nowrap'>
-                <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
-                    <button class='px-2.5 py-1.5 text-white font-extrabold rounded-lg text-xs shadow-sm {active_btn_color}'>{active_btn_label}</button>
-                </form>
-                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-lg text-xs shadow-sm">Verify</button></form>' if (u.verification_status != 'verified') else ''}
-                {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-lg text-xs shadow-sm inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
-                <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
-                    <button class='px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-key'></i> Reset Pwd</button>
-                </form>
-                <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
-                    <button class='px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-id-card'></i> Desk Reset</button>
-                </form>
-                <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
-                    <button class='px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-trash'></i></button>
-                </form>
+        <tr class='border-b border-slate-200 hover:bg-slate-50/80 transition text-xs'>
+            <td class='p-3.5 font-mono font-black text-emerald-900 text-xs whitespace-nowrap'><span class='bg-emerald-50 px-2 py-1 rounded border border-emerald-200 shadow-sm'>{u.member_id or f'ID-{u.id}'}</span></td>
+            <td class='p-3.5 min-w-[170px] font-black text-slate-900 text-sm leading-snug'>{u.full_name}<br><span class='text-[11px] text-slate-600 font-bold tracking-tight block mt-0.5'>{sub_text}</span></td>
+            <td class='p-3.5 font-semibold text-slate-800 text-xs leading-relaxed max-w-[200px] truncate'>{contact_disp}<br><span class='text-[11px] font-bold text-slate-500 block mt-0.5 truncate'>{loc_disp}</span></td>
+            <td class='p-3.5 text-xs whitespace-nowrap'><span class='font-black text-slate-800 uppercase tracking-wider block mb-0.5'>{id_type_label}</span><span class='text-[11px] text-slate-700 font-mono font-bold block'>{id_disp}</span>{photo_link}</td>
+            <td class='p-3.5 uppercase font-black text-[11px] text-slate-700 tracking-wider whitespace-nowrap'>{u.role.replace('_', ' ')}</td>
+            <td class='p-3.5 whitespace-nowrap'>{status_badge}</td>
+            <td class='p-3.5 whitespace-nowrap'>{v_badge}</td>
+            <td class='p-3.5 whitespace-nowrap space-y-1.5'>
+                <div class='flex items-center gap-1.5'>
+                    <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
+                        <button class='px-2.5 py-1 text-white font-extrabold rounded-md text-[11px] shadow-sm transition {active_btn_color}'>{active_btn_label}</button>
+                    </form>
+                    {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-md text-[11px] shadow-sm transition">Verify</button></form>' if (u.verification_status != 'verified') else ''}
+                    {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-md text-[11px] shadow-sm transition inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
+                </div>
+                <div class='flex items-center gap-1.5'>
+                    <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
+                        <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-md text-[11px] shadow-sm transition'><i class='fa-solid fa-key text-[10px] mr-1'></i> Reset Pwd</button>
+                    </form>
+                    <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
+                        <button class='px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-md text-[11px] shadow-sm transition'><i class='fa-solid fa-id-card text-[10px] mr-1'></i> Desk Reset</button>
+                    </form>
+                    <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
+                        <button class='px-2 py-1 bg-slate-200 hover:bg-rose-600 hover:text-white text-slate-700 font-extrabold rounded-md text-[11px] shadow-sm transition' title="Delete User"><i class='fa-solid fa-trash-can'></i></button>
+                    </form>
+                </div>
             </td>
         </tr>
         """
@@ -124,8 +128,8 @@ async def list_users(
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <title>Manage Users - Librarian Control Panel</title>
     </head>
-    <body class="bg-slate-100 min-h-screen p-6 font-sans">
-        <div class="max-w-7xl mx-auto space-y-6">
+    <body class="bg-slate-100 min-h-screen p-4 sm:p-6 font-sans">
+        <div class="max-w-[1536px] mx-auto space-y-6">
             <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-2xl font-extrabold text-slate-800">User Management Desk</h2>
@@ -164,16 +168,16 @@ async def list_users(
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs paginated-table">
-                        <thead class="bg-slate-100 uppercase text-slate-700 font-black text-xs tracking-wider border-b border-slate-300">
+                        <thead class="bg-slate-100 uppercase text-slate-700 font-black text-[11px] tracking-wider border-b border-slate-300">
                             <tr>
-                                <th class="p-4">Member ID</th>
-                                <th class="p-4">Full Name / Details</th>
-                                <th class="p-4">Contact / Location</th>
-                                <th class="p-4">ID Type / Photo</th>
-                                <th class="p-4">Role</th>
-                                <th class="p-4">Status</th>
-                                <th class="p-4">Verification</th>
-                                <th class="p-4">Actions</th>
+                                <th class="p-3.5">Member ID</th>
+                                <th class="p-3.5">Full Name / Details</th>
+                                <th class="p-3.5">Contact / Location</th>
+                                <th class="p-3.5">ID Type / Photo</th>
+                                <th class="p-3.5">Role</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5">Verification</th>
+                                <th class="p-3.5">Actions</th>
                             </tr>
                         </thead>
                         <tbody>

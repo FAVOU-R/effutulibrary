@@ -137,11 +137,29 @@ def qr_checkout(
     )
     copy.status = "issued"
     db.add(tx)
+
+    # Dispatch notification for patron and librarian desk
+    try:
+        from app.models import Notification
+        notif = Notification(
+            user_id=current_user.id,
+            title="⚡ In-Library Self-Checkout",
+            message=f"Self-checked out '{book.title}' (Copy {copy.copy_code}). Show Exit Pass at desk.",
+            type="info"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[NOTIF WARNING] {ex}")
+
     db.commit()
 
     return JSONResponse(content={
         "message": f"Successfully checked out '{book.title}'!",
         "book_title": book.title,
         "borrower": current_user.full_name,
+        "member_id": current_user.member_id or f"ID-{current_user.id}",
+        "copy_code": copy.copy_code,
+        "branch_name": copy.branch.name if copy.branch else "Library Desk",
+        "checkout_time": issue_date.strftime("%H:%M:%S GMT"),
         "due_date": due_date.strftime("%Y-%m-%d")
     })

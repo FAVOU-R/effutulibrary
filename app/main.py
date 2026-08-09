@@ -271,6 +271,7 @@ def role_dashboard(role: str, request: Request, db: Session = Depends(get_db)):
 
     # 3. Librarian View
     elif role == "librarian":
+        from app.models import Reservation
         branch = current_user.branch or db.query(Branch).first()
         pending_users = db.query(User).filter(User.is_approved == False, User.branch_id == branch.id).all()
         active_loans = db.query(Transaction).join(BookCopy).filter(
@@ -279,18 +280,31 @@ def role_dashboard(role: str, request: Request, db: Session = Depends(get_db)):
         ).all()
         loans_data = [{
             "id": t.id,
-            "book_title": t.book_copy.book.title,
-            "patron_name": t.patron.full_name,
+            "book_title": t.book_copy.book.title if (t.book_copy and t.book_copy.book) else "Library Book",
+            "patron_name": t.patron.full_name if t.patron else "Patron",
             "due_date": t.due_date.strftime("%Y-%m-%d"),
             "is_overdue": t.status == "overdue",
             "fine_amount_ghs": t.fine_amount
         } for t in active_loans]
 
+        pending_reservations = db.query(Reservation).filter(
+            Reservation.status.in_(["reserved", "pending", "ready"])
+        ).all()
+        res_data = [{
+            "id": r.id,
+            "book_title": r.book.title if r.book else "Library Book",
+            "patron_name": r.user.full_name if r.user else "Patron",
+            "patron_phone": r.user.phone if r.user else "-",
+            "reserved_at": r.reserved_at.strftime("%Y-%m-%d %H:%M") if r.reserved_at else "-",
+            "expires_at": r.expires_at.strftime("%Y-%m-%d") if r.expires_at else "-"
+        } for r in pending_reservations]
+
         return templates.TemplateResponse(request=request, name="dashboards/librarian.html", context={
             "current_user": current_user,
             "branch": branch,
             "pending_users": pending_users,
-            "active_loans": loans_data
+            "active_loans": loans_data,
+            "pending_reservations": res_data
         })
 
     # 4. Patron View

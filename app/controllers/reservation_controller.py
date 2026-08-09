@@ -329,3 +329,75 @@ async def update_reservation_status(
         return JSONResponse(content={"message": f"Reservation updated to {status}"})
 
     return RedirectResponse(url="/librarian/reservations", status_code=303)
+
+@router.post("/api/reservations/{res_id}/fulfill")
+@router.post("/librarian/reservations/{res_id}/fulfill")
+async def fulfill_reservation(
+    res_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_librarian_or_admin)
+):
+    from app.models import Transaction, BookCopy
+    from app.config import settings
+
+    r = db.query(Reservation).filter(Reservation.id == res_id).first()
+    if not r:
+        return JSONResponse(status_code=404, content={"error": "Reservation not found"})
+
+    # Find available copy for this book
+    copy = db.query(BookCopy).filter(BookCopy.book_id == r.book_id, BookCopy.status == "available").first()
+    if not copy:
+        copy = db.query(BookCopy).filter(BookCopy.book_id == r.book_id).first()
+
+    if not copy:
+        return JSONResponse(status_code=400, content={"error": "No physical copy available for this book"})
+
+    issue_date = datetime.utcnow()
+    due_date = issue_date + timedelta(days=getattr(settings, "LOAN_PERIOD_DAYS", 14))
+
+    # 1. Update copy status to issued
+    copy.status = "issued"
+
+    # 2. Record Active Checkout Transaction
+    tx = Transaction(
+        book_copy_id=copy.id,
+        patron_id=r.user_id,
+        issued_by_id=current_user.id,
+        issue_date=issue_date,
+        due_date=due_date,
+        status="active"
+    )
+    db.add(tx)
+
+    # 3. Mark reservation as fulfilled/collected
+    r.status = "fulfilled"
+
+    # 4. Award bonus points to patron for picking up on time
+    try:
+        point = UserPoint(user_id=r.user_id, points=5, reason=f"Picked up physical book '{r.book.title}' on time")
+        db.add(point)
+    except Exception as ex:
+        print(f"[POINT WARNING] {ex}")
+
+    # 5. Send notification to patron
+    try:
+        notif = Notification(
+            user_id=r.user_id,
+            title="Book Handover Confirmed! 📚",
+            message=f"You have picked up '{r.book.title}'. Return due date: {due_date.strftime('%Y-%m-%d')}.",
+            type="success"
+        )
+        db.add(notif)
+    except Exception as ex:
+        print(f"[NOTIF WARNING] {ex}")
+
+    db.commit()
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={
+            "message": f"Successfully handed over '{r.book.title}'! Active loan created, return due {due_date.strftime('%Y-%m-%d')}.",
+            "due_date": due_date.strftime("%Y-%m-%d")
+        })
+
+    return RedirectResponse(url="/dashboard/librarian", status_code=303)

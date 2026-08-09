@@ -55,15 +55,31 @@ async function executeQRCheckout(token) {
         const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(2);
 
         if (res.ok) {
-            resDiv.className = "mt-6 p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-lg text-xs leading-relaxed";
+            resDiv.className = "mt-6";
             resDiv.innerHTML = `
-                <div class="font-extrabold text-sm text-emerald-800 mb-1">
-                    <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> ${data.message}
+                <div class="p-5 bg-gradient-to-br from-emerald-950 via-slate-900 to-emerald-950 text-white rounded-2xl border-2 border-emerald-400 shadow-2xl space-y-3 text-left relative overflow-hidden">
+                    <div class="flex justify-between items-center border-b border-emerald-800/80 pb-2">
+                        <span class="text-[10px] font-black uppercase text-emerald-400 tracking-widest flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                            IN-LIBRARY SELF-CHECKOUT EXIT PASS
+                        </span>
+                        <span class="text-[10px] font-mono text-emerald-300 font-bold">${data.checkout_time || ''}</span>
+                    </div>
+
+                    <div>
+                        <h4 class="font-extrabold text-sm text-white leading-tight">${data.book_title}</h4>
+                        <p class="text-xs text-emerald-300 font-bold mt-0.5">Borrower: ${data.borrower} <span class="font-mono text-[10px] text-emerald-400">(${data.member_id || ''})</span></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-[11px] font-mono bg-slate-900/80 p-2.5 rounded-xl border border-emerald-900">
+                        <div><span class="text-slate-400 block text-[9px] uppercase font-sans">Copy Code</span><strong class="text-amber-400">${data.copy_code || '-'}</strong></div>
+                        <div><span class="text-slate-400 block text-[9px] uppercase font-sans">Return Due</span><strong class="text-emerald-300">${data.due_date}</strong></div>
+                    </div>
+
+                    <div class="text-[10px] text-emerald-200/90 font-medium text-center bg-emerald-900/40 p-2 rounded-lg border border-emerald-700/50">
+                        <i class="fa-solid fa-shield-check text-emerald-400 mr-1"></i> Show this green Exit Pass to the Desk Librarian when exiting.
+                    </div>
                 </div>
-                <p><strong>Book:</strong> ${data.book_title}</p>
-                <p><strong>Borrower:</strong> ${data.borrower}</p>
-                <p><strong>Return Due Date:</strong> ${data.due_date}</p>
-                <div class="mt-2 text-[10px] text-emerald-700 font-mono">Completed in ${elapsedSec}s</div>
             `;
         } else if (res.status === 401 || res.status === 403) {
             resDiv.className = "mt-6 p-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg text-xs font-semibold text-center space-y-2";

@@ -31,8 +31,8 @@
         </a>
     </div>
 
-    <!-- 2 Column Section: Pending Approvals & Active Branch Loans -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- 3 Column Section: Physical ID Desk, Pending Holds, Active Loans -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- Physical ID Verification Desk -->
         <div class="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-sm space-y-4">
@@ -42,7 +42,7 @@
                     Physical ID Verification Desk ({{ pending_users|length }})
                 </h3>
                 <p class="text-[11px] text-slate-500 font-medium mt-1 leading-relaxed">
-                    Online registration triggers an instant welcome email & Member ID. Inspect patron's physical Ghana Card, School ID, or Voters ID on first visit to verify account & grant full borrowing limit (up to 3 books).
+                    Inspect patron's physical Ghana Card, School ID, or Voters ID on first visit to verify account & grant full borrowing limit.
                 </p>
             </div>
 
@@ -63,7 +63,40 @@
                 {% else %}
                 <div class="text-center py-8 text-slate-400 text-xs font-medium">
                     <i class="fa-solid fa-circle-check text-2xl mb-2 text-slate-300 block"></i>
-                    No unverified patrons pending physical ID check for this branch
+                    No unverified patrons pending physical ID check
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Pending Physical Desk Pick-Up Holds -->
+        <div class="bg-white rounded-2xl border border-amber-200/90 p-5 shadow-sm space-y-4 bg-amber-50/20">
+            <div>
+                <h3 class="text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-bookmark text-amber-600 text-sm"></i>
+                    Pending Pick-Up Holds ({{ pending_reservations|length }})
+                </h3>
+                <p class="text-[11px] text-amber-800 font-medium mt-1 leading-relaxed">
+                    Patrons reserved these physical books online for 48h desk pickup. Pull copies off shelf and click "Hand Over" when patron arrives.
+                </p>
+            </div>
+
+            <div class="space-y-3">
+                {% for r in pending_reservations %}
+                <div class="p-3.5 bg-white border border-amber-300 rounded-xl flex flex-col justify-between gap-2 shadow-sm">
+                    <div>
+                        <div class="font-black text-slate-900 text-xs line-clamp-1">{{ r.book_title }}</div>
+                        <div class="text-[11px] text-slate-700 font-bold mt-0.5">Reserved by: <span class="text-amber-900">{{ r.patron_name }}</span> ({{ r.patron_phone }})</div>
+                        <div class="text-[10px] text-slate-500 font-mono mt-0.5">Expires: {{ r.expires_at }}</div>
+                    </div>
+                    <button onclick="fulfillReservation({{ r.id }})" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs py-2 rounded-lg shadow transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-hand-holding-hand"></i> Confirm Desk Issue & Hand Over
+                    </button>
+                </div>
+                {% else %}
+                <div class="text-center py-8 text-slate-400 text-xs font-medium">
+                    <i class="fa-solid fa-box-open text-2xl mb-2 text-slate-300 block"></i>
+                    No pending physical pick-up holds
                 </div>
                 {% endfor %}
             </div>
@@ -74,7 +107,7 @@
             <div class="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/80 flex justify-between items-center">
                 <h3 class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-file-invoice text-emerald-600 text-sm"></i>
-                    Branch Loans & Overdue Desk
+                    Branch Active Loans
                 </h3>
             </div>
 
@@ -82,33 +115,33 @@
                 <table class="w-full text-left text-xs text-slate-600 border-collapse">
                     <thead>
                         <tr class="bg-slate-100/80 text-slate-500 font-extrabold uppercase text-[11px] border-b border-slate-200">
-                            <th class="p-3.5">Book Title</th>
-                            <th class="p-3.5">Borrower</th>
-                            <th class="p-3.5">Due Date</th>
-                            <th class="p-3.5 text-right">Action</th>
+                            <th class="p-3">Book Title</th>
+                            <th class="p-3">Borrower</th>
+                            <th class="p-3">Due Date</th>
+                            <th class="p-3 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         {% for t in active_loans %}
                         <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5 font-bold text-slate-900">{{ t.book_title }}</td>
-                            <td class="p-3.5 font-medium text-slate-700">{{ t.patron_name }}</td>
-                            <td class="p-3.5 font-mono">
+                            <td class="p-3 font-bold text-slate-900 line-clamp-1">{{ t.book_title }}</td>
+                            <td class="p-3 font-medium text-slate-700">{{ t.patron_name }}</td>
+                            <td class="p-3 font-mono">
                                 {% if t.is_overdue %}
-                                    <span class="bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Overdue: GHS {{ "%.2f"|format(t.fine_amount_ghs) }}</span>
+                                    <span class="bg-rose-100 text-rose-800 border border-rose-200 font-extrabold text-[10px] px-2 py-0.5 rounded">GHS {{ "%.2f"|format(t.fine_amount_ghs) }}</span>
                                 {% else %}
-                                    <span class="text-slate-700 font-medium">{{ t.due_date }}</span>
+                                    <span class="text-slate-700 font-medium text-[11px]">{{ t.due_date }}</span>
                                 {% endif %}
                             </td>
-                            <td class="p-3.5 text-right">
-                                <button onclick="returnBook({{ t.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">Return</button>
+                            <td class="p-3 text-right">
+                                <button onclick="returnBook({{ t.id }})" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-[11px] px-3 py-1 rounded shadow-sm transition">Return</button>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
                             <td colspan="4" class="p-8 text-center text-slate-400 font-medium">
                                 <i class="fa-solid fa-folder-open text-2xl mb-2 text-slate-300 block"></i>
-                                No active loans currently recorded at this branch
+                                No active loans currently recorded
                             </td>
                         </tr>
                         {% endfor %}
@@ -127,6 +160,14 @@
 async function approveUser(userId) {
     if (!confirm("Approve patron and dispatch Brevo welcome email with Member ID?")) return;
     const res = await fetch(`/api/users/approve/${userId}`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message || data.error);
+    if (res.ok) window.location.reload();
+}
+
+async function fulfillReservation(resId) {
+    if (!confirm("Confirm physical book handover to patron at library desk? This will create an active 14-day loan.")) return;
+    const res = await fetch(`/api/reservations/${resId}/fulfill`, { method: 'POST', headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     alert(data.message || data.error);
     if (res.ok) window.location.reload();
