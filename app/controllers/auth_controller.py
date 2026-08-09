@@ -267,6 +267,7 @@ async def register_page(db: Session = Depends(get_db)):
 async def register(
     request: Request,
     full_name: str = Form(...),
+    username: str = Form(""),
     email: str = Form(""),
     phone: str = Form(...),
     password: str = Form(...),
@@ -290,6 +291,7 @@ async def register(
     phone_clean = phone.strip()
     id_number_clean = id_number.strip() if id_number.strip() else None
     alt_contact_clean = alt_contact.strip() if alt_contact.strip() else None
+    username_clean = username.strip().lower().lstrip('@') if username.strip() else None
 
     # Handle optional ID Photo upload
     id_photo_url = None
@@ -311,6 +313,32 @@ async def register(
         msg = f"Password must be at least {getattr(settings, 'MIN_PASSWORD_LENGTH', 6)} characters long."
         if wants_json: return JSONResponse(status_code=400, content={"error": msg})
         return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
+
+    # Username validation & auto-generation
+    import re
+    if username_clean:
+        if db.query(User).filter(User.username == username_clean).first():
+            msg = f"The username '@{username_clean}' is already taken. Please choose a different username."
+            if wants_json: return JSONResponse(status_code=400, content={"error": msg})
+            return HTMLResponse(f"<h3>{msg}</h3><a href='/auth/register'>Back</a>", status_code=400)
+        final_username = username_clean
+    else:
+        # Auto-generate username from full_name or email
+        if email_clean:
+            base_handle = email_clean.split("@")[0].lower()
+        else:
+            base_handle = full_name.strip().lower().replace(" ", "_")
+        
+        base_handle = re.sub(r'[^a-z0-9_]', '', base_handle)
+        if not base_handle:
+            base_handle = f"patron_{random.randint(100, 999)}"
+            
+        candidate = base_handle
+        counter = 1
+        while db.query(User).filter(User.username == candidate).first():
+            candidate = f"{base_handle}{counter}"
+            counter += 1
+        final_username = candidate
 
     # Duplicate Checks
     if email_clean and db.query(User).filter(User.email == email_clean).first():
@@ -335,6 +363,7 @@ async def register(
 
     user = User(
         full_name=full_name.strip(),
+        username=final_username,
         email=email_clean,
         phone=phone_clean,
         ghana_card_number=ghana_card,
@@ -501,9 +530,10 @@ async def login(
     wants_json = "application/json" in request.headers.get("accept", "").lower()
     identifier_clean = email.strip()
 
-    # Search user across email, ghana_card_number, id_number, phone, or member_id
+    # Search user across email, username, ghana_card_number, id_number, phone, or member_id
     user = db.query(User).filter(
         (User.email == identifier_clean.lower()) |
+        (User.username == identifier_clean.lower().lstrip('@')) |
         (User.ghana_card_number == identifier_clean.upper()) |
         (User.id_number == identifier_clean) |
         (User.phone == identifier_clean) |

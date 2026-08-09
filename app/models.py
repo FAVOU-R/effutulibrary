@@ -21,6 +21,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=True)
     member_id = Column(String(50), unique=True, index=True, nullable=True)
     full_name = Column(String(150), nullable=False)
     email = Column(String(150), unique=True, index=True, nullable=True)
@@ -51,6 +52,16 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=True)
     locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    @property
+    def display_username(self):
+        if self.username:
+            return f"@{self.username.lstrip('@')}"
+        if self.member_id:
+            return self.member_id
+        if self.email:
+            return f"@{self.email.split('@')[0]}"
+        return f"@{self.full_name.lower().replace(' ', '_')}"
 
 
     branch = relationship("Branch", back_populates="users")
