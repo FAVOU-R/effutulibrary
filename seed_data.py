@@ -8,12 +8,12 @@ from app.services.qr_service import generate_qr_token
 def seed_database():
     Base.metadata.create_all(bind=engine)
     
-    # Always ensure 50+ books and unabridged manuscripts are seeded
+    # Always ensure 50+ books and educational study guides are seeded
     try:
         from seed_50_books import seed_50_books
-        from seed_verbatim_full_books import populate_verbatim_books
+        from populate_all_book_summaries import populate_all_summaries
         seed_50_books()
-        populate_verbatim_books()
+        populate_all_summaries()
     except Exception as ex_b:
         print(f"[SEED 50 BOOKS WARNING] {ex_b}")
 
