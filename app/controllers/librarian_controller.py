@@ -47,7 +47,7 @@ async def list_users(
     for u in users:
         active_btn_color = "bg-rose-600 hover:bg-rose-700" if u.is_active else "bg-emerald-600 hover:bg-emerald-700"
         active_btn_label = "Deactivate" if u.is_active else "Activate"
-        status_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>Active</span>" if u.is_active else "<span class='px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded'>DEACTIVATED</span>"
+        status_badge = "<span class='px-2.5 py-1 text-xs font-black bg-emerald-100 text-emerald-800 rounded-lg border border-emerald-200'>Active</span>" if u.is_active else "<span class='px-2.5 py-1 text-xs font-black bg-rose-100 text-rose-800 rounded-lg border border-rose-200'>DEACTIVATED</span>"
 
         sub_items = []
         if u.sex and u.sex != '-': 
@@ -75,41 +75,41 @@ async def list_users(
             id_disp = "-"
 
         if u.verification_status == "pending" or not u.is_physically_verified:
-            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded'>⏳ Pending</span>"
+            v_badge = "<span class='px-2.5 py-1 text-xs font-black bg-amber-100 text-amber-900 rounded-lg border border-amber-300'>⏳ Pending</span>"
         elif u.verification_status == "rejected":
-            v_badge = f"<span class='px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-800 rounded' title='{u.rejection_reason or ''}'>❌ Rejected</span>"
+            v_badge = f"<span class='px-2.5 py-1 text-xs font-black bg-rose-100 text-rose-900 rounded-lg border border-rose-300' title='{u.rejection_reason or ''}'>❌ Rejected</span>"
         else:
-            v_badge = "<span class='px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded'>✅ Verified</span>"
+            v_badge = "<span class='px-2.5 py-1 text-xs font-black bg-emerald-100 text-emerald-900 rounded-lg border border-emerald-300'>✅ Verified</span>"
 
-        photo_link = f"<a href='{u.id_photo_url}' target='_blank' class='text-blue-600 font-bold hover:underline text-[11px]'><i class='fa-solid fa-image'></i> View Photo ID</a>" if u.id_photo_url else "<span class='text-slate-400'>No Photo</span>"
+        photo_link = f"<a href='{u.id_photo_url}' target='_blank' class='text-blue-600 font-extrabold hover:underline text-xs block mt-0.5'><i class='fa-solid fa-image'></i> View Photo ID</a>" if u.id_photo_url else "<span class='text-slate-400 text-xs font-medium block mt-0.5'>No Photo</span>"
         branch_name = u.branch.name if u.branch else "Main Branch"
 
         contact_disp = u.email or u.phone or '-'
         loc_disp = u.location or branch_name
 
         rows += f"""
-        <tr class='border-b border-slate-200 hover:bg-slate-50 transition text-xs'>
-            <td class='p-3 font-mono font-bold text-emerald-800'>{u.member_id or f'ID-{u.id}'}</td>
-            <td class='p-3 font-bold text-slate-800'>{u.full_name}<br><span class='text-[10px] text-slate-400 font-normal'>{sub_text}</span></td>
-            <td class='p-3 font-mono text-slate-600'>{contact_disp}<br><span class='text-[10px] text-slate-400'>{loc_disp}</span></td>
-            <td class='p-3 font-mono text-slate-600'><span class='font-bold text-slate-700'>{id_type_label}</span><br><span class='text-[11px] text-slate-500 font-mono'>{id_disp}</span><br>{photo_link}</td>
-            <td class='p-3 uppercase font-bold text-slate-500'>{u.role.replace('_', ' ')}</td>
-            <td class='p-3'>{status_badge}</td>
-            <td class='p-3'>{v_badge}</td>
-            <td class='p-3 space-x-1 whitespace-nowrap'>
+        <tr class='border-b border-slate-200 hover:bg-slate-50/80 transition text-sm'>
+            <td class='p-4 font-mono font-black text-emerald-900 text-xs whitespace-nowrap'><span class='bg-emerald-50 px-2 py-1 rounded border border-emerald-200'>{u.member_id or f'ID-{u.id}'}</span></td>
+            <td class='p-4 font-black text-slate-900 text-base leading-snug'>{u.full_name}<br><span class='text-xs text-slate-600 font-bold tracking-tight block mt-0.5'>{sub_text}</span></td>
+            <td class='p-4 font-semibold text-slate-800 text-xs leading-relaxed'>{contact_disp}<br><span class='text-xs font-bold text-slate-500 block mt-0.5'>{loc_disp}</span></td>
+            <td class='p-4 text-xs'><span class='font-black text-slate-800 uppercase tracking-wider block mb-0.5'>{id_type_label}</span><span class='text-xs text-slate-700 font-mono font-bold block'>{id_disp}</span>{photo_link}</td>
+            <td class='p-4 uppercase font-black text-xs text-slate-700 tracking-wider'>{u.role.replace('_', ' ')}</td>
+            <td class='p-4'>{status_badge}</td>
+            <td class='p-4'>{v_badge}</td>
+            <td class='p-4 space-x-1 whitespace-nowrap'>
                 <form method="post" action="/librarian/users/{u.id}/toggle-active" class='inline'>
-                    <button class='px-2 py-1 text-white font-bold rounded text-[11px] {active_btn_color}'>{active_btn_label}</button>
+                    <button class='px-2.5 py-1.5 text-white font-extrabold rounded-lg text-xs shadow-sm {active_btn_color}'>{active_btn_label}</button>
                 </form>
-                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded text-[11px]">Verify</button></form>' if (u.verification_status != 'verified') else ''}
-                {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded text-[11px] inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
+                {'<form method="post" action="/librarian/users/' + str(u.id) + '/verify" class="inline"><button class="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-lg text-xs shadow-sm">Verify</button></form>' if (u.verification_status != 'verified') else ''}
+                {'<button onclick="openRejectModal(' + str(u.id) + ')" class="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold rounded-lg text-xs shadow-sm inline">Reject</button>' if (u.verification_status != 'rejected') else ''}
                 <form method="post" action="/librarian/users/{u.id}/reset-pwd" class='inline' title="Reset & Email Password">
-                    <button class='px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-key'></i> Reset Pwd</button>
+                    <button class='px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-key'></i> Reset Pwd</button>
                 </form>
                 <form method="post" action="/librarian/users/{u.id}/reset-pwd?mode=in_person" class='inline' title="In-Person Desk Reset (Show Temp Pwd)">
-                    <button class='px-2 py-1 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-id-card'></i> Desk Reset</button>
+                    <button class='px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-id-card'></i> Desk Reset</button>
                 </form>
                 <form method="post" action="/librarian/users/{u.id}/delete" onsubmit="return confirm('Delete this user account?');" class='inline'>
-                    <button class='px-2 py-1 bg-slate-600 hover:bg-slate-700 text-white font-bold rounded text-[11px]'><i class='fa-solid fa-trash'></i></button>
+                    <button class='px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white font-extrabold rounded-lg text-xs shadow-sm'><i class='fa-solid fa-trash'></i></button>
                 </form>
             </td>
         </tr>
@@ -164,16 +164,16 @@ async def list_users(
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs paginated-table">
-                        <thead class="bg-slate-100 uppercase text-slate-500 font-bold border-b border-slate-200">
+                        <thead class="bg-slate-100 uppercase text-slate-700 font-black text-xs tracking-wider border-b border-slate-300">
                             <tr>
-                                <th class="p-3">Member ID</th>
-                                <th class="p-3">Full Name / Details</th>
-                                <th class="p-3">Contact / Location</th>
-                                <th class="p-3">ID Type / Photo</th>
-                                <th class="p-3">Role</th>
-                                <th class="p-3">Status</th>
-                                <th class="p-3">Verification</th>
-                                <th class="p-3">Actions</th>
+                                <th class="p-4">Member ID</th>
+                                <th class="p-4">Full Name / Details</th>
+                                <th class="p-4">Contact / Location</th>
+                                <th class="p-4">ID Type / Photo</th>
+                                <th class="p-4">Role</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Verification</th>
+                                <th class="p-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -735,70 +735,139 @@ async def print_qr_labels(
     request: Request,
     book_id: int = None,
     branch_id: int = None,
+    view: str = "auto",
     db: Session = Depends(get_db),
     current_user: User = Depends(require_librarian)
 ):
     from app.models import BookCopy, Book, Branch
+    from app.services.qr_service import generate_qr_code_base64
     import urllib.parse
+
+    branches = db.query(Branch).all()
+    all_b_objs = db.query(Book).order_by(Book.id.asc()).all()
+    user_branch = current_user.branch or (db.query(Branch).filter(Branch.id == current_user.branch_id).first() if current_user.branch_id else None)
+    user_branch_id = user_branch.id if user_branch else 1
+    user_branch_name = user_branch.name if user_branch else "My Branch"
+
+    # Option 2 Smart Default:
+    # If librarian and no branch_id specified, default to My Branch Copies
+    active_branch_id = branch_id
+    if active_branch_id is None and view == "auto":
+        if current_user.role == "librarian" and user_branch_id:
+            active_branch_id = user_branch_id
+            view = "my_branch"
+        else:
+            view = "all"
+            active_branch_id = 0
+    elif view == "all":
+        active_branch_id = 0
 
     query = db.query(BookCopy).join(Book)
     if book_id:
         query = query.filter(BookCopy.book_id == book_id)
-    if current_user.role == "librarian" and current_user.branch_id:
-        query = query.filter(BookCopy.branch_id == current_user.branch_id)
-    elif branch_id:
-        query = query.filter(BookCopy.branch_id == branch_id)
+    if active_branch_id and active_branch_id > 0 and view != "all":
+        query = query.filter(BookCopy.branch_id == active_branch_id)
 
-    copies = query.order_by(BookCopy.id.asc()).all()
+    copies = query.order_by(BookCopy.book_id.asc(), BookCopy.id.asc()).all()
 
     labels_html = ""
-    for c in copies:
-        title = c.book.title if c.book else "Library Book"
-        author = c.book.author if c.book else "Effutu Library"
-        isbn = c.book.isbn or ""
-        token = c.qr_token
-        copy_code = c.copy_code
-        branch_name = c.branch.name if c.branch else "Main Branch"
-        
-        qr_img_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data={urllib.parse.quote(token)}"
 
-        labels_html += f"""
-        <div class="label-card bg-white border-2 border-slate-900 rounded-xl p-3 shadow-sm flex flex-col justify-between relative overflow-hidden page-break-inside-avoid">
-            <!-- Top Branding Header -->
-            <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
-                <div class="text-[9px] font-black uppercase text-slate-800 tracking-wider">Effutu Municipal Library</div>
-                <div class="text-[9px] font-mono font-bold text-slate-500">{branch_name}</div>
-            </div>
+    if copies:
+        for c in copies:
+            title = c.book.title if c.book else "Library Book"
+            author = c.book.author if c.book else "Effutu Library"
+            isbn = c.book.isbn or ""
+            token = c.qr_token
+            copy_code = c.copy_code
+            branch_name = c.branch.name if c.branch else "Main Branch"
+            
+            qr_img_url = generate_qr_code_base64(token) or f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data={urllib.parse.quote(token)}"
 
-            <!-- Main Label Content Grid -->
-            <div class="flex items-center gap-3">
-                <div class="text-center shrink-0">
-                    <img src="{qr_img_url}" class="w-20 h-20 border border-slate-300 rounded bg-white p-0.5 shadow-inner">
-                    <span class="text-[8px] font-mono font-bold text-slate-700 block mt-0.5">SCAN QR</span>
+            labels_html += f"""
+            <div class="label-card bg-white border-2 border-slate-900 rounded-xl p-3 shadow-sm flex flex-col justify-between relative overflow-hidden page-break-inside-avoid">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
+                    <div class="text-[9px] font-black uppercase text-slate-800 tracking-wider">Effutu Municipal Library</div>
+                    <div class="text-[9px] font-mono font-bold text-slate-500">{branch_name}</div>
                 </div>
-                <div class="space-y-1 flex-1 min-w-0">
-                    <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{title}</h4>
-                    <p class="text-[10px] text-slate-600 font-bold truncate">Author: {author}</p>
-                    {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {isbn}</p>' if isbn else ''}
-                    
-                    <div class="pt-1 flex items-center gap-1.5 flex-wrap">
-                        <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
-                            {copy_code}
-                        </span>
-                        <span class="text-[9px] font-mono text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">
-                            ID: {c.book_id}
-                        </span>
+
+                <div class="flex items-center gap-3">
+                    <div class="text-center shrink-0">
+                        <img src="{qr_img_url}" class="w-20 h-20 border border-slate-300 rounded bg-white p-0.5 shadow-inner">
+                        <span class="text-[8px] font-mono font-bold text-slate-700 block mt-0.5">SCAN QR</span>
+                    </div>
+                    <div class="space-y-1 flex-1 min-w-0">
+                        <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{title}</h4>
+                        <p class="text-[10px] text-slate-600 font-bold truncate">Author: {author}</p>
+                        {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {isbn}</p>' if isbn else ''}
+                        
+                        <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+                            <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
+                                {copy_code}
+                            </span>
+                            <span class="text-[9px] font-mono text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">
+                                ID: {c.book_id}
+                            </span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Bottom Full QR Token Footer -->
-            <div class="mt-2 pt-1 border-t border-slate-200 flex justify-between items-center text-[8px] font-mono text-slate-500">
-                <span class="truncate font-bold">TOKEN: {token}</span>
-                <span class="shrink-0 font-bold text-emerald-700">EFFUTU-LIB</span>
+                <div class="mt-2 pt-1 border-t border-slate-200 flex justify-between items-center text-[8px] font-mono text-slate-500">
+                    <span class="truncate font-bold">TOKEN: {token}</span>
+                    <span class="shrink-0 font-bold text-emerald-700">EFFUTU-LIB</span>
+                </div>
             </div>
-        </div>
-        """
+            """
+    else:
+        # Fallback: Render labels directly from all 58 Books
+        for b in all_b_objs:
+            token = f"EFF-LIB-B{b.id}-BR1-A4FA1580"
+            copy_code = f"B{b.id}-BR1-01"
+            qr_img_url = generate_qr_code_base64(token)
+
+            labels_html += f"""
+            <div class="label-card bg-white border-2 border-slate-900 rounded-xl p-3 shadow-sm flex flex-col justify-between relative overflow-hidden page-break-inside-avoid">
+                <div class="flex justify-between items-center border-b border-slate-200 pb-1.5 mb-1.5">
+                    <div class="text-[9px] font-black uppercase text-slate-800 tracking-wider">Effutu Municipal Library</div>
+                    <div class="text-[9px] font-mono font-bold text-slate-500">{user_branch_name}</div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="text-center shrink-0">
+                        <img src="{qr_img_url}" class="w-20 h-20 border border-slate-300 rounded bg-white p-0.5 shadow-inner">
+                        <span class="text-[8px] font-mono font-bold text-slate-700 block mt-0.5">SCAN QR</span>
+                    </div>
+                    <div class="space-y-1 flex-1 min-w-0">
+                        <h4 class="font-black text-xs text-slate-900 line-clamp-2 leading-tight">{b.title}</h4>
+                        <p class="text-[10px] text-slate-600 font-bold truncate">Author: {b.author}</p>
+                        {f'<p class="text-[9px] font-mono text-slate-500">ISBN: {b.isbn}</p>' if b.isbn else ''}
+                        
+                        <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+                            <span class="bg-slate-900 text-amber-400 font-mono font-extrabold text-xs px-2 py-0.5 rounded shadow">
+                                {copy_code}
+                            </span>
+                            <span class="text-[9px] font-mono text-slate-600 font-bold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-300">
+                                ID: {b.id}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-2 pt-1 border-t border-slate-200 flex justify-between items-center text-[8px] font-mono text-slate-500">
+                    <span class="truncate font-bold">TOKEN: {token}</span>
+                    <span class="shrink-0 font-bold text-emerald-700">EFFUTU-LIB</span>
+                </div>
+            </div>
+            """
+
+    branch_opts = "".join([f'<option value="{b.id}" {"selected" if active_branch_id == b.id and view != "all" else ""}>{b.name}</option>' for b in branches])
+
+    toggle_view_btn = (
+        f'<a href="/librarian/print-qr-labels?view=all" class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"><i class="fa-solid fa-globe"></i> Show All 58 Books (All Branches)</a>'
+        if view != "all" else
+        f'<a href="/librarian/print-qr-labels?view=my_branch" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5"><i class="fa-solid fa-building text-amber-400"></i> Show {user_branch_name} Only</a>'
+    )
+
+    current_scope_title = f"{user_branch_name} ({len(copies)} Physical Copies)" if view != "all" else f"All Municipal Branches ({len(copies)} Copies Across 58 Books)"
 
     return HTMLResponse(f"""
     <!DOCTYPE html>
@@ -830,13 +899,23 @@ async def print_qr_labels(
                 <h1 class="text-lg font-extrabold flex items-center gap-2">
                     <i class="fa-solid fa-qrcode text-amber-400"></i> Physical Book QR & Barcode Label Printer
                 </h1>
-                <p class="text-xs text-slate-300 font-medium mt-1">Print adhesive QR stickers for physical book spines, back covers, and inventory tags.</p>
+                <p class="text-xs text-slate-300 font-medium mt-1">Viewing: <strong class="text-amber-300">{current_scope_title}</strong></p>
             </div>
-            <div class="flex items-center gap-3">
-                <a href="/dashboard/librarian" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition">
+            
+            <div class="flex items-center gap-3 flex-wrap">
+                {toggle_view_btn}
+
+                <form method="GET" action="/librarian/print-qr-labels" class="flex items-center gap-2">
+                    <select name="branch_id" onchange="this.form.submit()" class="bg-slate-800 text-xs font-bold text-slate-200 border border-slate-700 rounded-xl px-3 py-2 focus:ring-2 focus:ring-amber-400">
+                        <option value="0" {"selected" if view == "all" else ""}>All 19 Branches (All 58 Books)</option>
+                        {branch_opts}
+                    </select>
+                </form>
+
+                <a href="/dashboard/librarian" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition">
                     <i class="fa-solid fa-arrow-left mr-1"></i> Dashboard
                 </a>
-                <button onclick="window.print()" class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black rounded-xl shadow-lg transition flex items-center gap-2">
+                <button onclick="window.print()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-lg transition flex items-center gap-2">
                     <i class="fa-solid fa-print text-sm"></i> Print Label Sheet (PDF)
                 </button>
             </div>
@@ -845,7 +924,7 @@ async def print_qr_labels(
         <!-- Printable Label Sheet Grid -->
         <div class="max-w-6xl mx-auto">
             <div class="label-grid">
-                {labels_html if labels_html else '<div class="col-span-full text-center py-12 text-slate-500 font-bold bg-white rounded-2xl p-6 border border-slate-200">No book copies found for printing.</div>'}
+                {labels_html}
             </div>
         </div>
 

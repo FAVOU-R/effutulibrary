@@ -12,8 +12,8 @@
     <!-- Top Action Bar -->
     <div class="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div class="flex items-center space-x-3 min-w-0">
-            <a href="/catalog" class="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl transition text-xs font-extrabold shrink-0" title="Back to Catalog">
-                <i class="fa-solid fa-arrow-left"></i> Catalog
+            <a href="/catalog" onclick="if(history.length>1){history.back();return false;}" class="p-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl transition text-xs font-extrabold shrink-0 flex items-center gap-1" title="Back to Previous Page">
+                <i class="fa-solid fa-arrow-left"></i> <span>Back</span>
             </a>
             <div class="min-w-0">
                 <span class="bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider">

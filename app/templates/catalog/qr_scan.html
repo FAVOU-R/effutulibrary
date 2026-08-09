@@ -2,7 +2,13 @@
 {% block title %}QR Instant Borrow Desk - Effutu Municipal Library System{% endblock %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white border border-slate-200 rounded-lg p-6 shadow-md text-center">
+<div class="max-w-md mx-auto bg-white border border-slate-200 rounded-lg p-6 shadow-md text-center relative">
+    <div class="flex justify-start mb-2">
+        <a href="/catalog" onclick="if(history.length>1){history.back();return false;}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrow-left text-xs"></i> <span>Back</span>
+        </a>
+    </div>
+
     <div class="inline-block p-4 bg-emerald-100 rounded-full text-emerald-800 mb-3">
         <i class="fa-solid fa-qrcode text-4xl"></i>
     </div>
@@ -44,7 +50,7 @@ async function executeQRCheckout(token) {
 
     try {
         const startTime = Date.now();
-        const res = await fetch('/api/issue/qr-checkout', { method: 'POST', body: fd });
+        const res = await fetch('/api/circulation/qr-checkout', { method: 'POST', body: fd });
         const data = await res.json();
         const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(2);
 
@@ -59,13 +65,20 @@ async function executeQRCheckout(token) {
                 <p><strong>Return Due Date:</strong> ${data.due_date}</p>
                 <div class="mt-2 text-[10px] text-emerald-700 font-mono">Completed in ${elapsedSec}s</div>
             `;
+        } else if (res.status === 401 || res.status === 403) {
+            resDiv.className = "mt-6 p-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg text-xs font-semibold text-center space-y-2";
+            resDiv.innerHTML = `
+                <div><i class="fa-solid fa-lock text-amber-600 text-lg mb-1 block"></i> Sign-In Required</div>
+                <p class="text-[11px] font-normal text-slate-600">Please sign in to your patron or staff account to execute Quick Borrow.</p>
+                <a href="/login" class="inline-block mt-1 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs shadow transition">Sign In Now</a>
+            `;
         } else {
             resDiv.className = "mt-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold";
-            resDiv.textContent = data.error || "Checkout failed";
+            resDiv.textContent = data.error || data.detail || "Checkout failed. Please verify token.";
         }
     } catch(e) {
         resDiv.className = "mt-6 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold";
-        resDiv.textContent = "Error executing checkout";
+        resDiv.textContent = "Error connecting to library server.";
     }
 }
 

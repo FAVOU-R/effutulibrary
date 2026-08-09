@@ -103,6 +103,10 @@ app.include_router(branch_router)
 app.include_router(user_router)
 app.include_router(book_router)
 app.include_router(issue_router)
+
+from app.controllers.issue_controller import qr_checkout
+app.post("/api/issue/qr-checkout")(qr_checkout)
+app.post("/api/circulation/qr-checkout")(qr_checkout)
 app.include_router(ai_router)
 app.include_router(librarian_router)
 app.include_router(reservation_router)
@@ -203,15 +207,15 @@ def on_startup():
 def home_redirect(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_optional(request, db)
     if user:
-        return RedirectResponse(url=f"/dashboard/{user.role}")
-    return RedirectResponse(url="/auth/login")
+        return RedirectResponse(url=f"/dashboard/{user.role}", status_code=303)
+    return RedirectResponse(url="/auth/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, db: Session = Depends(get_db)):
     user = get_current_user_optional(request, db)
     if user:
-        return RedirectResponse(url=f"/dashboard/{user.role}")
-    return RedirectResponse(url="/auth/login")
+        return RedirectResponse(url=f"/dashboard/{user.role}", status_code=303)
+    return RedirectResponse(url="/auth/login", status_code=303)
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, db: Session = Depends(get_db)):

@@ -212,18 +212,26 @@ async function openBookModal(id) {
 
         const copiesHTML = (b.copies && b.copies.length > 0) ? b.copies.map(c => `
             <div class="p-3.5 border border-slate-200 rounded-xl bg-slate-50/80 flex items-center justify-between gap-3">
-                <div class="space-y-1">
+                <div class="space-y-1 flex-1 min-w-0">
                     <div class="font-mono font-bold text-xs text-slate-900">${c.copy_code}</div>
                     <div class="text-[11px] text-slate-500 font-medium">${c.branch_name}</div>
-                    <div>
+                    <div class="pt-0.5">
                         <span class="inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-md ${c.status === 'available' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'} uppercase">
                             ${c.status}
                         </span>
                     </div>
+                    <div class="pt-1 flex items-center gap-1.5">
+                        <span class="text-[10px] font-mono font-bold text-slate-700 truncate bg-white px-2 py-0.5 rounded border border-slate-200">
+                            ${c.qr_token || 'EFF-LIB-TOKEN'}
+                        </span>
+                        <button onclick="navigator.clipboard.writeText('${c.qr_token || c.copy_code}'); alert('Token copied: ' + '${c.qr_token || c.copy_code}')" class="text-[10px] font-bold bg-slate-200 hover:bg-slate-300 text-slate-800 px-2 py-0.5 rounded transition shrink-0">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
                 </div>
                 <div class="text-center shrink-0">
                     <img src="${c.qr_base64 || b.qr}" class="w-16 h-16 border border-slate-200 rounded-lg bg-white p-1 shadow-sm">
-                    <span class="text-[9px] font-mono text-slate-400 block mt-1">QR TOKEN</span>
+                    <span class="text-[9px] font-mono text-slate-400 block mt-1">QR STICKER</span>
                 </div>
             </div>
         `).join('') : `

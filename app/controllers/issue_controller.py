@@ -80,6 +80,7 @@ def return_book(
     return JSONResponse(content={"message": "Book returned successfully"})
 
 @router.post("/qr-checkout")
+@router.post("/api/issue/qr-checkout")
 def qr_checkout(
     qr_token: str = Form(...),
     db: Session = Depends(get_db),
@@ -93,35 +94,32 @@ def qr_checkout(
     if not token_clean:
         return JSONResponse(status_code=400, content={"error": "QR Token cannot be empty"})
 
-    # 1. Exact match by qr_token or copy_code
+    # 1. Exact match on full qr_token or full copy_code (case-insensitive)
     copy = db.query(BookCopy).filter(
-        (BookCopy.qr_token == token_clean) | (BookCopy.copy_code == token_clean)
+        (BookCopy.qr_token.ilike(token_clean)) | (BookCopy.copy_code.ilike(token_clean))
     ).first()
 
-    # 2. Pattern match by book ID (e.g. EFF-LIB-B1-MAIN -> B1 -> book_id=1)
+    # 2. Match unique token suffix (e.g. 374F383B or 2FOBFA6D)
     if not copy:
-        m = re.search(r'B(\d+)', token_clean, re.IGNORECASE)
-        if m:
-            book_id = int(m.group(1))
-            copy = db.query(BookCopy).filter(BookCopy.book_id == book_id, BookCopy.status == "available").first()
-            if not copy:
-                copy = db.query(BookCopy).filter(BookCopy.book_id == book_id).first()
+        token_parts = token_clean.split('-')
+        last_part = token_parts[-1].strip()
+        if len(last_part) >= 6:
+            copy = db.query(BookCopy).filter(BookCopy.qr_token.ilike(f"%{last_part}")).first()
 
-    # 3. Fallback: Search Book by title / ID
-    if not copy:
-        m_id = re.search(r'(\d+)', token_clean)
-        if m_id:
-            b_id = int(m_id.group(1))
-            book_obj = db.query(Book).filter(Book.id == b_id).first()
-            if book_obj:
-                copy = db.query(BookCopy).filter(BookCopy.book_id == book_obj.id, BookCopy.status == "available").first()
-                if not copy:
-                    copy = db.query(BookCopy).filter(BookCopy.book_id == book_obj.id).first()
+    # 3. Match full copy code format B{book_id}-BR{branch_id}-{copy_num}
+    if not copy and re.match(r'^B\d+[\-_]BR\d+[\-_]\d+$', token_clean, re.IGNORECASE):
+        copy = db.query(BookCopy).filter(BookCopy.copy_code.ilike(token_clean)).first()
 
     if not copy:
         return JSONResponse(
             status_code=404, 
-            content={"error": f"Resource not available for token '{token_clean}'. Please verify token code or copy ID."}
+            content={"error": f"Invalid QR Token '{token_clean}'. Please verify all digits or scan the QR sticker on the physical book."}
+        )
+
+    if copy.status != "available":
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Book copy '{copy.copy_code}' ('{copy.book.title}') is currently {copy.status.upper()} and unavailable for checkout."}
         )
 
     book = copy.book
