@@ -369,12 +369,22 @@ def get_user_reading_history(db: Session, current_user: User):
         return {"recent_borrowed": [], "favorite_categories": [], "personalized_recommendations": []}
 
 def get_ai_response(message: str, db: Session = None, current_user: User = None) -> str:
-    groq_key = os.getenv("GROQ_API_KEY")
-    if not groq_key:
-        return "Akwaaba! GROQ_API_KEY is not configured on Render environment. Please set GROQ_API_KEY to enable Araba AI."
-
     from datetime import datetime
     import re
+
+    full_name = getattr(current_user, "full_name", "") if current_user else ""
+    first_name = full_name.strip().split()[0] if full_name.strip() else "Patron"
+
+    groq_key = os.getenv("GROQ_API_KEY")
+    if not groq_key:
+        try:
+            local_books = search_books_db(db, message) if db else []
+            if local_books:
+                titles_list = ", ".join([f"'{b['title']}' ({b['category']})" for b in local_books[:3]])
+                return f"Akwaaba {first_name}! I am Araba AI, your Effutu Municipal Library assistant. Based on your query, here are matching books in our catalog: {titles_list}. You can reserve physical copies or read softcopy editions in your portal."
+        except Exception:
+            pass
+        return f"Akwaaba {first_name}! I am Araba AI, your Effutu Municipal Library assistant. We have 61 books cataloged across 19 municipal branches. Feel free to search our catalog or visit your local branch desk!"
     now_str = datetime.utcnow().strftime('%A, %B %d, %Y at %H:%M:%S UTC')
 
     stats = get_live_stats(db)
@@ -479,21 +489,47 @@ SECURITY & PRIVACY RULES:
             {"role": "user", "content": message}
         ]
 
-        try:
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-                tools=tools_schema,
-                tool_choice="auto",
-                max_tokens=300
-            )
-        except Exception as tool_err:
-            print(f"[GROQ TOOL CALL RETRY WITHOUT TOOLS] Error: {tool_err}")
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-                max_tokens=300
-            )
+        AI_MODELS = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it"
+        ]
+
+        response = None
+        used_model = None
+
+        for m in AI_MODELS:
+            try:
+                response = client.chat.completions.create(
+                    model=m,
+                    messages=messages,
+                    tools=tools_schema,
+                    tool_choice="auto",
+                    max_tokens=300
+                )
+                used_model = m
+                break
+            except Exception as model_err:
+                err_str = str(model_err)
+                print(f"[GROQ MODEL FALLBACK TRY] Model '{m}' failed: {err_str[:120]}")
+                if "429" in err_str or "rate limit" in err_str.lower():
+                    continue # Try next fallback model
+                else:
+                    # Retry without tools
+                    try:
+                        response = client.chat.completions.create(
+                            model=m,
+                            messages=messages,
+                            max_tokens=300
+                        )
+                        used_model = m
+                        break
+                    except Exception:
+                        continue
+
+        if not response:
+            raise Exception("All Groq AI models hit rate limits or were temporarily unavailable.")
 
         response_message = response.choices[0].message
         tool_calls = getattr(response_message, "tool_calls", None)
@@ -521,12 +557,16 @@ SECURITY & PRIVACY RULES:
                     "content": json.dumps(result if result is not None else {"result": "None"})
                 })
 
-            second_response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages,
-                max_tokens=300
-            )
-            ans = second_response.choices[0].message.content or ""
+            try:
+                second_response = client.chat.completions.create(
+                    model=used_model or "llama-3.1-8b-instant",
+                    messages=messages,
+                    max_tokens=300
+                )
+                ans = second_response.choices[0].message.content or ""
+            except Exception as tool_second_err:
+                print(f"[SECOND RESPONSE FALLBACK] Error: {tool_second_err}")
+                ans = response_message.content or ""
         else:
             ans = response_message.content or "Akwaaba! How can I assist you with Effutu Library resources today?"
 
@@ -545,4 +585,12 @@ SECURITY & PRIVACY RULES:
         return "Groq package not installed. Please run `pip install groq`."
     except Exception as e:
         print(f"Groq AI error: {e}")
-        return f"AI Assistant temporarily offline. Please contact librarian. Error: {str(e)[:150]}"
+        # Smart Local Catalog Fallback Mode
+        try:
+            local_books = search_books_db(db, message)
+            if local_books:
+                titles_list = ", ".join([f"'{b['title']}' ({b['category']})" for b in local_books[:3]])
+                return f"Akwaaba {first_name}! Araba AI is operating in local catalog mode. Based on your query, here are relevant books in our catalog: {titles_list}. You can reserve physical copies or read softcopy editions in your portal."
+        except Exception:
+            pass
+        return f"Akwaaba {first_name}! I am Araba AI, your Effutu Municipal Library assistant. Feel free to search our 61 cataloged books or visit your local branch desk!"

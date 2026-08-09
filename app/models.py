@@ -123,6 +123,7 @@ class Transaction(Base):
     due_date = Column(DateTime, nullable=False)
     return_date = Column(DateTime, nullable=True)
     fine_amount = Column(Float, default=0.00)
+    extension_count = Column(Integer, default=0)
     status = Column(String(30), default="active") # active, returned, overdue
 
     book_copy = relationship("BookCopy", back_populates="transactions")

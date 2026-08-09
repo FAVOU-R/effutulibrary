@@ -194,11 +194,17 @@ def extend_loan(
     if not tx:
         return JSONResponse(status_code=404, content={"error": "Loan record not found"})
 
-    # Check permission
-    if current_user.role == "patron" and tx.patron_id != current_user.id:
-        return JSONResponse(status_code=403, content={"error": "Unauthorized to extend this loan"})
+    # Check permission and 1-extension limit for patrons
+    if current_user.role == "patron":
+        if tx.patron_id != current_user.id:
+            return JSONResponse(status_code=403, content={"error": "Unauthorized to extend this loan"})
+        if tx.status == "overdue":
+            return JSONResponse(status_code=400, content={"error": "Overdue loans cannot be extended online. Please visit the library desk."})
+        if (tx.extension_count or 0) >= 1:
+            return JSONResponse(status_code=400, content={"error": "Extension Limit Reached: Each book loan can only be extended ONCE for +7 days."})
 
     tx.due_date = tx.due_date + timedelta(days=7)
+    tx.extension_count = (tx.extension_count or 0) + 1
     if tx.status == "overdue":
         tx.status = "active"
 

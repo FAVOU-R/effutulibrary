@@ -108,10 +108,12 @@
                     <span>Reading Leaderboard</span>
                 </a>
 
+                {% if current_user.role == 'patron' %}
                 <a href="/scan-qr" class="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl font-bold text-sm text-slate-800 hover:bg-emerald-50 hover:text-emerald-900 transition">
                     <i class="fa-solid fa-qrcode text-cyan-600 text-base w-5 text-center"></i>
                     <span>QR Quick Borrow</span>
                 </a>
+                {% endif %}
             </div>
 
             {% if current_user.role in ['sys_admin', 'hq_admin', 'librarian'] %}

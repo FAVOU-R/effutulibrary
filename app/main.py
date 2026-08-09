@@ -150,6 +150,7 @@ def on_startup():
         ("books", "content_text", "TEXT"),
         ("books", "shelf_location", "VARCHAR(100) DEFAULT 'Shelf 1A - General Collection'"),
         ("books", "call_number", "VARCHAR(50)"),
+        ("transactions", "extension_count", "INTEGER DEFAULT 0"),
     ]
 
     try:
@@ -325,6 +326,7 @@ def role_dashboard(role: str, request: Request, db: Session = Depends(get_db)):
             "due_date": t.due_date.strftime("%Y-%m-%d"),
             "is_overdue": t.status == "overdue",
             "fine_amount_ghs": t.fine_amount or 0.0,
+            "extension_count": t.extension_count or 0,
             "type": "Loan"
         } for t in active_loans]
 

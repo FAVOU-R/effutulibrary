@@ -956,6 +956,7 @@ async def list_loans(
     from datetime import datetime
 
     branches = db.query(Branch).all()
+    user_branch_name = current_user.branch.name if getattr(current_user, 'branch', None) else "Branch 1 - Winneba HQ Library"
     query = db.query(Transaction).join(BookCopy).join(Book).join(User, Transaction.patron_id == User.id)
 
     # Filter by search query
@@ -975,12 +976,15 @@ async def list_loans(
     if status_filter != "all":
         query = query.filter(Transaction.status == status_filter)
 
-    # Filter by branch
-    if branch_id and branch_id > 0:
+    # Strict Branch Access Rules:
+    # 1. Branch Librarians: STRICTLY LIMITED TO THEIR OWN ASSIGNED BRANCH
+    # 2. Sys Admin & HQ Admin: FULL MUNICIPAL NETWORK ACCESS (All 19 Branches)
+    if current_user.role == "librarian":
+        user_branch = current_user.branch_id or 1
+        query = query.filter(BookCopy.branch_id == user_branch)
+        branch_id = user_branch
+    elif branch_id and branch_id > 0:
         query = query.filter(BookCopy.branch_id == branch_id)
-    elif current_user.role == "librarian" and current_user.branch_id and branch_id == 0:
-        # Default to librarian's branch if not explicitly searching all
-        pass
 
     transactions = query.order_by(Transaction.id.desc()).all()
 
@@ -1084,8 +1088,8 @@ async def list_loans(
                     <p class="text-xs text-slate-500 mt-1">Audit active book loans, view historical returns, manage due dates, & receive returned physical copies</p>
                 </div>
                 <div class="flex items-center gap-2">
-                    <a href="/scan-qr" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-qrcode"></i> Quick Borrow Desk
+                    <a href="/librarian/reservations" class="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-bookmark"></i> Book Reservations
                     </a>
                     <a href="/dashboard/{current_user.role}" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition">
                         Back to Dashboard
@@ -1126,27 +1130,33 @@ async def list_loans(
             </div>
 
             <!-- Filters & Search -->
-            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                <form method="get" action="/librarian/loans" class="flex flex-wrap items-center gap-3 w-full">
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
+                <form method="get" action="/librarian/loans" class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full">
                     <div class="relative w-full sm:w-80">
-                        <input type="search" name="q" value="{q}" placeholder="Search patron, member ID, book, copy code..." class="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
+                        <input type="search" name="q" value="{q}" placeholder="Search patron, member ID, book, copy code..." class="w-full pl-9 pr-8 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none shadow-sm">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
                     </div>
 
-                    <select name="status_filter" onchange="this.form.submit()" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-700 shadow-sm cursor-pointer">
+                    <select name="status_filter" onchange="this.form.submit()" class="px-3.5 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-800 shadow-sm cursor-pointer">
                         <option value="all" {"selected" if status_filter == "all" else ""}>All Statuses</option>
                         <option value="active" {"selected" if status_filter == "active" else ""}>🟢 Active Loans Only</option>
                         <option value="overdue" {"selected" if status_filter == "overdue" else ""}>🚨 Overdue Only</option>
                         <option value="returned" {"selected" if status_filter == "returned" else ""}>✅ Returned History</option>
                     </select>
 
-                    <select name="branch_id" onchange="this.form.submit()" class="px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-700 shadow-sm cursor-pointer">
-                        <option value="0">All Branches</option>
+                    {f'''
+                    <select name="branch_id" onchange="this.form.submit()" class="px-3.5 py-2 border border-slate-300 rounded-xl text-xs bg-white font-extrabold text-slate-800 shadow-sm cursor-pointer">
+                        <option value="0">All 19 Municipal Branches</option>
                         {branch_options}
                     </select>
+                    ''' if current_user.role in ['sys_admin', 'hq_admin', 'admin'] else f'''
+                    <div class="px-3.5 py-2 bg-emerald-50 text-emerald-950 border border-emerald-300 rounded-xl text-xs font-black flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-building-user text-emerald-700"></i> {user_branch_name}
+                    </div>
+                    '''}
 
-                    <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition">Filter</button>
-                    {f'<a href="/librarian/loans" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl transition">Clear Filters</a>' if q or status_filter != 'all' or branch_id > 0 else ''}
+                    <button type="submit" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-sm transition">Filter</button>
+                    {f'<a href="/librarian/loans" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs rounded-xl transition text-center">Clear Filters</a>' if q or status_filter != 'all' or branch_id > 0 else ''}
                 </form>
             </div>
 
@@ -1249,6 +1259,11 @@ async def extend_loan_due_date(
         print(f"[EXTEND NOTIF WARNING] {ex}")
 
     db.commit()
+
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse(content={"message": f"Successfully extended due date for '{book_title}' to {tx.due_date.strftime('%Y-%m-%d')}!"})
+
+    return RedirectResponse(url="/librarian/loans", status_code=303)
 
 @router.post("/loans/{trans_id}/waive-fine")
 async def waive_loan_fine(

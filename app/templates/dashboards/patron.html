@@ -136,11 +136,15 @@
                                 <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 font-extrabold text-[10px] px-2.5 py-1 rounded-lg">Active (On Schedule)</span>
                             {% endif %}
                         </td>
-                        <td class="p-3.5 text-right">
+                        <td class="p-3.5 text-right whitespace-nowrap">
                             {% if t.type != 'Reservation' and not t.is_overdue %}
-                                <button onclick="extendLoan({{ t.id }})" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition">
-                                    <i class="fa-solid fa-calendar-plus mr-1"></i> +7 Days
-                                </button>
+                                {% if (t.extension_count or 0) < 1 %}
+                                    <button onclick="extendLoan({{ t.id }})" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-[11px] px-3 py-1.5 rounded-lg shadow-sm transition" title="Extend due date once by +7 days">
+                                        <i class="fa-solid fa-calendar-plus mr-1"></i> +7 Days
+                                    </button>
+                                {% else %}
+                                    <span class="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200" title="Each book loan can only be extended once">Extended (1/1 Max)</span>
+                                {% endif %}
                             {% endif %}
                         </td>
                     </tr>
