@@ -396,6 +396,7 @@ def catalog_page(request: Request, db: Session = Depends(get_db)):
     })
 
 @app.get("/read/{book_id}", response_class=HTMLResponse)
+@app.get("/catalog/read/{book_id}", response_class=HTMLResponse)
 def read_book_page(book_id: int, request: Request, db: Session = Depends(get_db)):
     user = get_current_user_optional(request, db)
     book = db.query(Book).filter(Book.id == book_id).first()

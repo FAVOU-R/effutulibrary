@@ -25,21 +25,6 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
-            <!-- Araba AI Audio Reader Controls -->
-            <div class="flex items-center bg-emerald-950 border border-emerald-500/50 rounded-xl p-1 text-xs space-x-1 shadow-md">
-                <button id="araba-speech-play-btn" onclick="toggleArabaSpeech()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-lg transition flex items-center gap-1">
-                    <i class="fa-solid fa-volume-high text-xs"></i> <span id="araba-speech-label">Listen (Araba AI Voice)</span>
-                </button>
-                <select id="araba-speech-rate" onchange="changeSpeechRate()" class="bg-slate-900 text-emerald-300 font-bold text-xs border border-emerald-700 rounded-lg px-2 py-1 focus:ring-1 focus:ring-emerald-400">
-                    <option value="1.0">1.0x</option>
-                    <option value="1.25">1.25x</option>
-                    <option value="1.5">1.5x</option>
-                </select>
-                <button onclick="stopArabaSpeech()" class="p-1.5 text-rose-400 hover:text-rose-300 font-bold" title="Stop Reading">
-                    <i class="fa-solid fa-square text-xs"></i>
-                </button>
-            </div>
-
             <!-- Font Controls & Dark/Light Mode -->
             <div class="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 space-x-1 text-xs">
                 <button onclick="changeFontSize(-1)" class="p-1.5 hover:text-emerald-400 text-slate-300 font-bold" title="Decrease Font Size">A-</button>
@@ -60,6 +45,55 @@
     <div class="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 text-xs flex items-center gap-2.5 shadow-sm">
         <i class="fa-solid fa-shield-halved text-amber-600 text-base shrink-0"></i>
         <span><strong>Protected Softcopy Digital Reader:</strong> Printing, copying, and downloading are restricted. Read freely online or reserve the hard copy for physical pick-up at your branch.</span>
+    </div>
+
+    <!-- Araba AI Audio Player Full Control Panel -->
+    <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-xl text-white space-y-3 font-sans">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="flex items-center space-x-2">
+                <button id="araba-speech-play-btn" onclick="toggleArabaSpeech()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl transition flex items-center gap-2 text-xs sm:text-sm shadow-md">
+                    <i class="fa-solid fa-play text-xs" id="araba-play-icon"></i> <span id="araba-speech-label">Listen (Araba AI Voice)</span>
+                </button>
+                <button onclick="stopArabaSpeech()" class="px-3 py-2 bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-400 font-bold rounded-xl transition text-xs border border-slate-700 flex items-center gap-1.5" title="Stop Audio Reading">
+                    <i class="fa-solid fa-square text-rose-500 text-xs"></i> Stop
+                </button>
+            </div>
+
+            <!-- Voice Speed Slowness / Fastness Controls -->
+            <div class="flex items-center bg-slate-800 border border-slate-700 rounded-xl p-1 text-xs space-x-1 shadow-inner">
+                <span class="text-slate-400 font-bold px-1.5"><i class="fa-solid fa-gauge-high text-emerald-400 mr-1"></i>Speed:</span>
+                <button onclick="adjustSpeechRate(-0.25)" class="w-7 h-7 bg-slate-700 hover:bg-emerald-600 text-white font-black rounded-lg transition flex items-center justify-center text-sm" title="Slow Down Audio (-0.25x)">-</button>
+                <select id="araba-speech-rate" onchange="changeSpeechRate()" class="bg-slate-950 text-emerald-300 font-extrabold text-xs border border-emerald-600/50 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-emerald-400 focus:outline-none">
+                    <option value="0.75">0.75x (Slower)</option>
+                    <option value="1.0" selected>1.0x (Normal Speed)</option>
+                    <option value="1.25">1.25x (Faster)</option>
+                    <option value="1.5">1.5x (Fast)</option>
+                    <option value="1.75">1.75x (Very Fast)</option>
+                    <option value="2.0">2.0x (Double Speed)</option>
+                </select>
+                <button onclick="adjustSpeechRate(0.25)" class="w-7 h-7 bg-slate-700 hover:bg-emerald-600 text-white font-black rounded-lg transition flex items-center justify-center text-sm" title="Speed Up Audio (+0.25x)">+</button>
+            </div>
+        </div>
+
+        <!-- Real-Time Audio Time & Level Status Bar -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs font-bold font-mono gap-1">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px]">
+                        <i class="fa-solid fa-microphone-lines text-emerald-400 animate-pulse" id="audio-live-icon"></i>
+                        <span id="audio-status-badge">Ready to Read</span>
+                    </span>
+                    <span id="araba-speech-time-status" class="text-slate-200">⏱️ 00:00 / 00:00</span>
+                </div>
+                <div id="araba-speech-duration-est" class="text-slate-400 font-sans font-medium text-[11px]">
+                    Est. Reading Time: Select page or click Listen
+                </div>
+            </div>
+            <!-- Animated Audio Level Progress Bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden shadow-inner">
+                <div id="araba-speech-progress-bar" class="bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-300 h-2.5 rounded-full transition-all duration-200" style="width: 0%"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Main eBook Softcopy Reading Viewport -->
@@ -243,12 +277,39 @@ function renderPage(pageIdx) {
     document.getElementById('next-page-btn').disabled = (currentPage === totalPages - 1);
     document.getElementById('chapter-select').value = currentPage;
 
+    // Update Audio Time Estimate for the active page
+    updatePageAudioEstimate();
+
     // Smooth scroll to top of reading toolbar so no text is hidden under headers
     const toolbar = document.getElementById('chapter-select');
     if (toolbar) {
         const yOffset = -120;
         const y = toolbar.getBoundingClientRect().top + window.pageYOffset + yOffset;
         window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    }
+}
+
+function updatePageAudioEstimate() {
+    if (!bookPages || bookPages.length === 0) return;
+    const rawText = bookPages[currentPage] || "";
+    const cleanText = sanitizeTextForHumanReading(rawText);
+    const words = cleanText ? cleanText.split(/\s+/).length : 0;
+    const rate = parseFloat(document.getElementById('araba-speech-rate')?.value || "1.0");
+    const estSeconds = Math.round((words / 150) * 60 / rate);
+    const estMins = Math.floor(estSeconds / 60);
+    const estSecs = estSeconds % 60;
+    const formattedDuration = `${String(estMins).padStart(2, '0')}:${String(estSecs).padStart(2, '0')}`;
+
+    const durationEl = document.getElementById('araba-speech-duration-est');
+    if (durationEl) {
+        durationEl.textContent = `Est. Audio Duration: ${estMins}m ${estSecs}s (${words} words)`;
+    }
+
+    if (!isSpeaking) {
+        const timeStatusEl = document.getElementById('araba-speech-time-status');
+        if (timeStatusEl) {
+            timeStatusEl.textContent = `⏱️ 00:00 / ${formattedDuration}`;
+        }
     }
 }
 
@@ -330,9 +391,89 @@ async function confirmHardcopyBorrow(bookId) {
     }
 }
 
-// Araba AI Voice Reader (Web Speech API Integration)
+// Araba AI Voice Reader (Human-like Speech & Strictly Female Voice)
 let currentSpeechUtterance = null;
 let isSpeaking = false;
+
+// Ensure browser voice list is loaded
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
+}
+
+function sanitizeTextForHumanReading(text) {
+    if (!text) return "";
+    let clean = text;
+
+    // 1. Strip long repeating symbol lines (e.g. =====, -----, *****, _____)
+    clean = clean.replace(/([=_\-*#~@$%^&+|\\\/]{2,})/g, ' ');
+
+    // 2. Remove markdown formatting tags (headers #, bold **, italics *, code `)
+    clean = clean.replace(/^#+\s+/gm, '');
+    clean = clean.replace(/[\*_`~]/g, '');
+
+    // 3. Replace URLs with a natural phrase
+    clean = clean.replace(/https?:\/\/\S+/gi, ' web link ');
+
+    // 4. Expand common abbreviations to full spoken words
+    clean = clean.replace(/\b(e\.g\.|eg)\b/gi, 'for example');
+    clean = clean.replace(/\b(i\.e\.|ie)\b/gi, 'that is');
+    clean = clean.replace(/\b(vs\.|vs)\b/gi, 'versus');
+    clean = clean.replace(/\b(etc\.|etc)\b/gi, 'et cetera');
+    clean = clean.replace(/\b(ch\.|chap\.)\b/gi, 'chapter');
+    clean = clean.replace(/\b(vol\.)\b/gi, 'volume');
+    clean = clean.replace(/\b(dr\.)\b/gi, 'Doctor');
+    clean = clean.replace(/\b(prof\.)\b/gi, 'Professor');
+    clean = clean.replace(/\b(mr\.)\b/gi, 'Mister');
+    clean = clean.replace(/\b(mrs\.)\b/gi, 'Missus');
+    clean = clean.replace(/\b(ms\.)\b/gi, 'Miss');
+
+    // 5. Speak ISBN numbers digit by digit naturally
+    clean = clean.replace(/ISBN:?\s*([\d\-]+)/gi, (match, isbn) => {
+        const digits = isbn.replace(/\D/g, '').split('').join(' ');
+        return `I S B N ${digits}`;
+    });
+
+    // 6. Clean up excessive whitespace, tabs, and line breaks
+    clean = clean.replace(/\s+/g, ' ').trim();
+
+    return clean;
+}
+
+function getFemaleEnglishVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // 1. Highest Priority: English voices with explicit female names
+    const femaleKeywords = [
+        'female', 'samantha', 'zira', 'victoria', 'karen', 'fiona', 'hazel', 
+        'siri', 'aria', 'jenny', 'sonia', 'ava', 'emma', 'stephanie', 
+        'google uk english female', 'google us english female', 'natural female'
+    ];
+
+    let voice = voices.find(v => 
+        v.lang.startsWith('en') && 
+        femaleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+    );
+
+    // 2. Second Priority: Any English voice that does NOT contain male keywords
+    if (!voice) {
+        const maleKeywords = ['male', 'david', 'george', 'mark', 'james', 'richard', 'alex', 'daniel', 'fred', 'google us english male'];
+        voice = voices.find(v => 
+            v.lang.startsWith('en') && 
+            !maleKeywords.some(kw => v.name.toLowerCase().includes(kw))
+        );
+    }
+
+    // 3. Fallback to any English voice
+    if (!voice) {
+        voice = voices.find(v => v.lang.startsWith('en'));
+    }
+
+    return voice;
+}
 
 function toggleArabaSpeech() {
     if (!('speechSynthesis' in window)) {
@@ -352,7 +493,10 @@ function toggleArabaSpeech() {
 
     // Get current active page text
     const activePageEl = document.querySelector('.book-page:not(.hidden)');
-    const textToRead = activePageEl ? activePageEl.innerText : document.getElementById('book-content-body').innerText;
+    const rawText = activePageEl ? activePageEl.innerText : document.getElementById('book-content-body').innerText;
+
+    // Sanitize text: strip ===, ----, ###, markdown symbols and URLs for human-like reading
+    const textToRead = sanitizeTextForHumanReading(rawText);
 
     if (!textToRead || !textToRead.trim()) {
         alert("No readable text found on current page.");
@@ -363,30 +507,99 @@ function toggleArabaSpeech() {
     const utter = new SpeechSynthesisUtterance(textToRead.trim());
     const rate = parseFloat(document.getElementById('araba-speech-rate').value || "1.0");
     utter.rate = rate;
-    utter.pitch = 1.0;
+    utter.pitch = 1.05; // Slightly elevated pitch for clear, pleasant female intonation
 
-    // Pick a natural English voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const prefVoice = voices.find(v => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha') || v.name.includes('Female')));
-    if (prefVoice) utter.voice = prefVoice;
+    // Assign female voice exclusively
+    const femaleVoice = getFemaleEnglishVoice();
+    if (femaleVoice) {
+        utter.voice = femaleVoice;
+        console.log(`[Araba AI Audio Reader] Selected Female Voice: ${femaleVoice.name} (${femaleVoice.lang})`);
+    }
+
+    // Calculate Estimated Audio Duration
+    const words = textToRead.trim().split(/\s+/).length;
+    const estSeconds = Math.round((words / 150) * 60 / rate);
+    const estMins = Math.floor(estSeconds / 60);
+    const estSecs = estSeconds % 60;
+    const formattedDuration = `${String(estMins).padStart(2, '0')}:${String(estSecs).padStart(2, '0')}`;
+
+    document.getElementById('araba-speech-duration-est').textContent = `Est. Audio Duration: ${estMins}m ${estSecs}s (${words} words)`;
+    document.getElementById('araba-speech-time-status').textContent = `⏱️ 00:00 / ${formattedDuration}`;
 
     utter.onstart = () => {
         isSpeaking = true;
         document.getElementById('araba-speech-label').textContent = "Pause Araba AI";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-pause text-xs";
+        document.getElementById('audio-status-badge').textContent = "Reading Aloud (Female Voice)";
+        document.getElementById('audio-status-badge').parentElement.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px]";
+    };
+
+    utter.onboundary = (event) => {
+        if (event.name === 'word' || event.charIndex !== undefined) {
+            const charIdx = event.charIndex || 0;
+            const pct = Math.min(100, Math.round((charIdx / textToRead.length) * 100));
+            
+            // Elapsed Seconds
+            const elapsed = Math.round(estSeconds * (charIdx / textToRead.length));
+            const elMins = Math.floor(elapsed / 60);
+            const elSecs = elapsed % 60;
+            const formattedElapsed = `${String(elMins).padStart(2, '0')}:${String(elSecs).padStart(2, '0')}`;
+
+            document.getElementById('araba-speech-progress-bar').style.width = `${pct}%`;
+            document.getElementById('araba-speech-time-status').textContent = `⏱️ ${formattedElapsed} / ${formattedDuration}`;
+        }
+    };
+
+    utter.onpause = () => {
+        document.getElementById('araba-speech-label').textContent = "Resume Araba AI";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-play text-xs";
+        document.getElementById('audio-status-badge').textContent = "Audio Paused";
+        document.getElementById('audio-status-badge').parentElement.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px]";
+    };
+
+    utter.onresume = () => {
+        document.getElementById('araba-speech-label').textContent = "Pause Araba AI";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-pause text-xs";
+        document.getElementById('audio-status-badge').textContent = "Reading Aloud (Female Voice)";
+        document.getElementById('audio-status-badge').parentElement.className = "inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px]";
     };
 
     utter.onend = () => {
         isSpeaking = false;
         document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-play text-xs";
+        document.getElementById('audio-status-badge').textContent = "Completed";
+        document.getElementById('araba-speech-progress-bar').style.width = "100%";
+        document.getElementById('araba-speech-time-status').textContent = `⏱️ ${formattedDuration} / ${formattedDuration}`;
     };
 
     utter.onerror = (e) => {
         console.error("Speech Synthesis Error:", e);
         isSpeaking = false;
         document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-play text-xs";
+        document.getElementById('audio-status-badge').textContent = "Ready to Read";
     };
 
     window.speechSynthesis.speak(utter);
+}
+
+function adjustSpeechRate(delta) {
+    const select = document.getElementById('araba-speech-rate');
+    let current = parseFloat(select.value || "1.0");
+    let nextVal = (current + delta).toFixed(2);
+    if (nextVal < 0.5) nextVal = 0.5;
+    if (nextVal > 2.0) nextVal = 2.0;
+    
+    // Find closest option or set value
+    let foundOption = Array.from(select.options).find(opt => Math.abs(parseFloat(opt.value) - parseFloat(nextVal)) < 0.1);
+    if (foundOption) {
+        select.value = foundOption.value;
+    } else {
+        select.value = "1.0";
+    }
+
+    changeSpeechRate();
 }
 
 function changeSpeechRate() {
@@ -401,6 +614,10 @@ function stopArabaSpeech() {
         window.speechSynthesis.cancel();
         isSpeaking = false;
         document.getElementById('araba-speech-label').textContent = "Listen (Araba AI Voice)";
+        document.getElementById('araba-play-icon').className = "fa-solid fa-play text-xs";
+        document.getElementById('audio-status-badge').textContent = "Ready to Read";
+        document.getElementById('araba-speech-progress-bar').style.width = "0%";
+        document.getElementById('araba-speech-time-status').textContent = "⏱️ 00:00 / 00:00";
     }
 }
 
